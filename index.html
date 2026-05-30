@@ -117,6 +117,15 @@
                     <a onclick="switchTab('accessori')" style="cursor: pointer;">
                         <span data-zh="配件" data-it="Accessori">Accessori</span>
                     </a>
+                    <a onclick="switchTab('newproducts')" style="cursor: pointer;">
+                        <span data-zh="新款上市" data-it="Nuovi Arrivi">Nuovi Arrivi</span>
+                    </a>
+                    <a onclick="switchTab('discounts')" style="cursor: pointer;">
+                        <span data-zh="折扣产品" data-it="Sconti">Sconti</span>
+                    </a>
+                    <a onclick="switchTab('backend')" style="cursor: pointer;">
+                        <span data-zh="后台" data-it="Backend">Backend</span>
+                    </a>
                 </div>
                 <div class="lang-toggle">
                     <button class="lang-btn active" onclick="changeLanguage('it', event)">IT</button>
@@ -239,6 +248,66 @@
             </button>
             <div class="items-grid" id="accessori-grid"></div>
         </div>
+
+        <!-- New Products Tab -->
+        <div id="newproducts" class="tab-content">
+            <div class="page-header">
+                <h1 class="page-title" data-zh="新款上市" data-it="Nuovi Arrivi">Nuovi Arrivi</h1>
+                <p class="page-subtitle" data-zh="展示最新产品" data-it="Mostra i nuovi arrivi">Mostra i nuovi arrivi</p>
+            </div>
+            <button class="add-btn" onclick="openAddModal('newproducts')">
+                <i class="fas fa-plus"></i> <span data-zh="添加新款" data-it="Aggiungi Nuovo">Aggiungi Nuovo</span>
+            </button>
+            <div class="items-grid" id="newproducts-grid"></div>
+        </div>
+
+        <!-- Discounts Tab -->
+        <div id="discounts" class="tab-content">
+            <div class="page-header">
+                <h1 class="page-title" data-zh="折扣产品" data-it="Sconti">Sconti</h1>
+                <p class="page-subtitle" data-zh="展示折扣商品" data-it="Mostra i prodotti in sconto">Mostra i prodotti in sconto</p>
+            </div>
+            <button class="add-btn" onclick="openAddModal('discounts')">
+                <i class="fas fa-plus"></i> <span data-zh="添加折扣" data-it="Aggiungi Sconto">Aggiungi Sconto</span>
+            </button>
+            <div class="items-grid" id="discounts-grid"></div>
+        </div>
+
+        <!-- Backend Traffic Tab -->
+        <div id="backend" class="tab-content">
+            <div class="page-header">
+                <h1 class="page-title" data-zh="后台" data-it="Backend">Backend</h1>
+                <p class="page-subtitle" data-zh="查看访客流量和IP名单" data-it="Visualizza traffico e lista IP">Visualizza traffico e lista IP</p>
+            </div>
+            <div class="info-section">
+                <div class="info-title">
+                    <i class="fas fa-chart-line"></i>
+                    <span data-zh="流量统计" data-it="Statistiche traffico">Statistiche traffico</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label" data-zh="总访问次数" data-it="Visite totali">Visite totali</span>
+                    <span class="info-value" id="total-visits">0</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label" data-zh="唯一IP" data-it="IP unici">IP unici</span>
+                    <span class="info-value" id="unique-ips">0</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label" data-zh="页面访问" data-it="Pagine visitate">Pagine visitate</span>
+                    <span class="info-value" id="page-visits">-</span>
+                </div>
+            </div>
+            <div class="info-section">
+                <div class="info-title">
+                    <i class="fas fa-users"></i>
+                    <span data-zh="访客名单" data-it="Lista visitatori">Lista visitatori</span>
+                </div>
+                <div id="visitor-list"></div>
+                <button class="add-btn" onclick="showAddVisitor()">
+                    <i class="fas fa-user-plus"></i> <span data-zh="添加访客" data-it="Aggiungi visitatore">Aggiungi visitatore</span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Modal for Adding/Editing -->
@@ -255,7 +324,7 @@
                 
                 <div class="form-group" id="form-category-group">
                     <label class="form-label" data-zh="分类" data-it="Categoria">Categoria</label>
-                    <select id="form-category" class="form-input" required></select>
+                    <select id="form-category" class="form-input"></select>
                 </div>
                 
                 <div class="form-group">
@@ -331,7 +400,12 @@
             populateFilterOptions('accessori');
             loadItems('usato');
             loadItems('accessori');
+            loadItems('newproducts');
+            loadItems('discounts');
             updateLanguage();
+            renderVisitorList();
+            updateTrafficStats();
+            recordVisit('homepage');
         }
 
         function changeLanguage(lang, event) {
@@ -354,6 +428,10 @@
             populateFilterOptions('accessori');
             loadItems('usato');
             loadItems('accessori');
+            loadItems('newproducts');
+            loadItems('discounts');
+            renderVisitorList();
+            updateTrafficStats();
         }
 
         function switchTab(tabName) {
@@ -422,8 +500,23 @@
             editingId = null;
             document.getElementById('modal-title').textContent = currentLang === 'it' ? 'Aggiungi' : '添加';
             document.getElementById('item-form').reset();
+            document.getElementById('form-image-file').value = '';
+            toggleCategoryGroup(category);
             populateCategorySelect(category);
             document.getElementById('modal').classList.add('active');
+        }
+
+        function toggleCategoryGroup(category) {
+            const group = document.getElementById('form-category-group');
+            const select = document.getElementById('form-category');
+            if (!group || !select) return;
+            if (category === 'usato' || category === 'accessori') {
+                group.style.display = 'block';
+                select.required = true;
+            } else {
+                group.style.display = 'none';
+                select.required = false;
+            }
         }
 
         function populateCategorySelect(category) {
@@ -450,6 +543,7 @@
             document.getElementById('form-price').value = item.price;
             document.getElementById('form-image-file').value = '';
             document.getElementById('form-image').value = item.image && !item.image.startsWith('data:') ? item.image : '';
+            toggleCategoryGroup(category);
             populateCategorySelect(category);
             document.getElementById('form-category').value = item.category || '';
             document.getElementById('modal').classList.add('active');
@@ -469,7 +563,7 @@
                 if (editingId !== null && !image) {
                     image = items[editingId]?.image || '';
                 }
-                const newItem = { name, desc, price, category, image };
+                const newItem = { name, desc, price, category: (currentCategory === 'usato' || currentCategory === 'accessori') ? category : '', image };
                 if (editingId !== null) {
                     items[editingId] = newItem;
                 } else {
@@ -498,13 +592,71 @@
             loadItems(category);
         }
 
-        function deleteItem(category, index) {
-            if (confirm(currentLang === 'it' ? 'Confermi l\'eliminazione?' : '确定要删除吗？')) {
-                let items = JSON.parse(localStorage.getItem(category) || '[]');
-                items.splice(index, 1);
-                localStorage.setItem(category, JSON.stringify(items));
-                loadItems(category);
+        function getVisitorList() {
+            return JSON.parse(localStorage.getItem('visitorList') || '[]');
+        }
+
+        function saveVisitorList(list) {
+            localStorage.setItem('visitorList', JSON.stringify(list));
+            renderVisitorList();
+            updateTrafficStats();
+        }
+
+        function generateRandomIp() {
+            return Array.from({ length: 4 }, () => Math.floor(Math.random() * 254) + 1).join('.');
+        }
+
+        function recordVisit(page) {
+            const visitors = getVisitorList();
+            const ip = generateRandomIp();
+            visitors.unshift({ ip, page, time: new Date().toLocaleString() });
+            if (visitors.length > 100) visitors.pop();
+            saveVisitorList(visitors);
+        }
+
+        function showAddVisitor() {
+            const ip = prompt(currentLang === 'it' ? 'Inserisci IP visitatore:' : '请输入访客IP：');
+            const page = prompt(currentLang === 'it' ? 'Inserisci pagina名称:' : '请输入页面名称：');
+            if (ip && page) {
+                addVisitor(ip, page);
             }
+        }
+
+        function addVisitor(ip, page) {
+            const visitors = getVisitorList();
+            visitors.unshift({ ip, page, time: new Date().toLocaleString() });
+            if (visitors.length > 100) visitors.pop();
+            saveVisitorList(visitors);
+        }
+
+        function updateTrafficStats() {
+            const visitors = getVisitorList();
+            const uniqueIps = new Set(visitors.map(v => v.ip));
+            const pageCounts = visitors.reduce((acc, item) => {
+                acc[item.page] = (acc[item.page] || 0) + 1;
+                return acc;
+            }, {});
+            document.getElementById('total-visits').textContent = visitors.length;
+            document.getElementById('unique-ips').textContent = uniqueIps.size;
+            const pageVisits = Object.entries(pageCounts).map(([page, count]) => `${page}: ${count}`).join(' | ');
+            document.getElementById('page-visits').textContent = pageVisits || '-';
+        }
+
+        function renderVisitorList() {
+            const list = getVisitorList();
+            const container = document.getElementById('visitor-list');
+            if (!container) return;
+            if (!list.length) {
+                container.innerHTML = `<p style="color:#666;">${currentLang === 'it' ? 'Nessun visitatore registrato.' : '暂无访客记录。'}</p>`;
+                return;
+            }
+            const rows = list.slice(0, 20).map(item => `
+                <div class="info-row">
+                    <span class="info-label">${item.ip}</span>
+                    <span class="info-value">${item.page} · ${item.time}</span>
+                </div>
+            `).join('');
+            container.innerHTML = rows;
         }
 
         function sendRepairInquiry(event) {
