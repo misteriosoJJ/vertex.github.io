@@ -63,6 +63,7 @@
         .item-image { width: 100%; aspect-ratio: 4 / 3; margin-bottom: 14px; overflow: hidden; border-radius: 8px; background: #f3f4f6; }
         .item-image img, .item-image video { width: 100%; height: 100%; object-fit: cover; display: block; }
         .media-count { position: absolute; top: 24px; right: 24px; background: rgba(17, 24, 39, 0.82); color: #fff; border-radius: 999px; padding: 5px 9px; font-size: 0.78rem; font-weight: 700; }
+        .items-empty { border: 1px dashed #cbd5e1; border-radius: 8px; padding: 18px; color: #64748b; background: #f8fafc; text-align: center; }
         .item-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; color: #1f2937; }
         .item-desc { font-size: 0.9rem; color: #666; margin-bottom: 12px; line-height: 1.5; }
         .item-price { font-size: 1.25rem; font-weight: 700; color: #1f4f84; margin-bottom: 12px; }
@@ -773,17 +774,42 @@
 
         async function fetchCloudProducts(category) {
             const query = `section=eq.${encodeURIComponent(category)}&select=*&order=created_at.desc`;
-            const response = await fetch(`${cloudConfig.url}/rest/v1/products?${query}`, {
-                headers: {
-                    apikey: cloudConfig.key,
-                    Authorization: `Bearer ${cloudConfig.key}`
-                }
+            return requestJson(`${cloudConfig.url}/rest/v1/products?${query}`, {
+                apikey: cloudConfig.key,
+                Authorization: `Bearer ${cloudConfig.key}`
             });
-            if (!response.ok) {
-                console.warn(await response.text());
-                return null;
+        }
+
+        async function requestJson(url, headers) {
+            if (window.fetch) {
+                const response = await fetch(url, { headers, cache: 'no-store' });
+                if (!response.ok) {
+                    console.warn(await response.text());
+                    return null;
+                }
+                return response.json();
             }
-            return response.json();
+
+            return new Promise(resolve => {
+                const request = new XMLHttpRequest();
+                request.open('GET', url);
+                Object.keys(headers).forEach(key => request.setRequestHeader(key, headers[key]));
+                request.onload = () => {
+                    if (request.status < 200 || request.status >= 300) {
+                        console.warn(request.responseText);
+                        resolve(null);
+                        return;
+                    }
+                    try {
+                        resolve(JSON.parse(request.responseText));
+                    } catch (error) {
+                        console.warn(error);
+                        resolve(null);
+                    }
+                };
+                request.onerror = () => resolve(null);
+                request.send();
+            });
         }
 
         async function refreshAllItems() {
@@ -844,9 +870,9 @@
                 const safeDesc = escapeHtml(item.desc);
                 const media = getItemMedia(item);
                 const coverMarkup = mediaMarkup(media[0], item.name);
-                const imageMarkup = coverMarkup ? `<div class="item-image" onclick="openMediaModal('${category}', '${safeId}')">${coverMarkup}</div>${media.length > 1 ? `<span class="media-count">+${media.length}</span>` : ''}` : '';
                 const categoryLabel = item.category ? getCategoryLabel(item.category) : '';
                 const safeId = escapeHtml(item.id);
+                const imageMarkup = coverMarkup ? `<div class="item-image" onclick="openMediaModal('${category}', '${safeId}')">${coverMarkup}</div>${media.length > 1 ? `<span class="media-count">+${media.length}</span>` : ''}` : '';
                 card.innerHTML = `
                     ${imageMarkup}
                     <h3>${safeName}</h3>
@@ -861,6 +887,13 @@
                 `;
                 grid.appendChild(card);
             });
+
+            if (!filteredItems.length) {
+                const empty = document.createElement('div');
+                empty.className = 'items-empty';
+                empty.textContent = currentLang === 'it' ? 'Nessun prodotto da mostrare.' : '暂无商品显示。';
+                grid.appendChild(empty);
+            }
 
             document.querySelectorAll('[data-it]').forEach(el => {
                 const it = el.getAttribute('data-it');
