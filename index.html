@@ -93,6 +93,16 @@
         .image-preview.active { display: grid; }
         .media-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
         .media-gallery img, .media-gallery video { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; background: #f3f4f6; }
+        .modal-content.media-viewer { max-width: min(1080px, 94vw); padding: 20px; background: #0f172a; color: #ffffff; }
+        .modal-content.media-viewer .modal-header { color: #ffffff; margin: 0 40px 16px 0; font-size: 1.15rem; }
+        .modal-content.media-viewer .modal-close { color: #ffffff; }
+        .modal-content.media-viewer .media-gallery { display: block; margin-bottom: 0; }
+        .media-viewer-stage { display: flex; align-items: center; justify-content: center; min-height: min(68vh, 720px); background: #020617; border-radius: 10px; overflow: hidden; }
+        .media-viewer-stage img, .media-viewer-stage video { max-width: 100%; max-height: min(68vh, 720px); width: auto; height: auto; object-fit: contain; display: block; }
+        .media-viewer-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 10px; margin-top: 14px; }
+        .media-thumb { border: 2px solid transparent; border-radius: 8px; padding: 0; background: #1e293b; overflow: hidden; cursor: pointer; aspect-ratio: 1 / 1; }
+        .media-thumb.active { border-color: #60a5fa; }
+        .media-thumb img, .media-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
         
         /* Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center; }
@@ -137,6 +147,9 @@
             .container { padding: 20px 16px; }
             .page-title { font-size: 1.6rem; }
             .modal-content { max-width: 100%; padding: 24px; }
+            .modal-content.media-viewer { width: 94%; padding: 14px; }
+            .media-viewer-stage { min-height: 58vh; }
+            .media-viewer-stage img, .media-viewer-stage video { max-height: 58vh; }
             .info-row { flex-direction: column; gap: 6px; }
             .mobile-admin-panel { border-radius: 0; margin-left: -16px; margin-right: -16px; }
             body.admin-mode { padding-bottom: 12px; }
@@ -503,6 +516,8 @@
         let supabaseClient = null;
         let cloudEnabled = false;
         let cloudSignedIn = false;
+        let activeMediaList = [];
+        let activeMediaTitle = '';
 
         const categoryOptions = {
             usato: [
@@ -1114,8 +1129,12 @@
             const media = getItemMedia(item);
             if (!media.length) return;
             const modal = document.getElementById('modal');
+            const modalContent = modal.querySelector('.modal-content');
+            activeMediaList = media;
+            activeMediaTitle = item.name;
             document.getElementById('modal-title').textContent = item.name;
             document.getElementById('item-form').style.display = 'none';
+            modalContent.classList.add('media-viewer');
             let gallery = document.getElementById('media-gallery');
             if (!gallery) {
                 gallery = document.createElement('div');
@@ -1123,13 +1142,35 @@
                 gallery.className = 'media-gallery';
                 document.querySelector('.modal-content').appendChild(gallery);
             }
-            gallery.innerHTML = media.map(mediaItem => {
-                if (mediaItem.type === 'video') {
-                    return `<video src="${escapeHtml(mediaItem.url)}" controls playsinline></video>`;
-                }
-                return `<img src="${escapeHtml(mediaItem.url)}" alt="${escapeHtml(item.name)}">`;
-            }).join('');
+            gallery.innerHTML = `
+                <div class="media-viewer-stage" id="media-viewer-stage"></div>
+                <div class="media-viewer-thumbs">
+                    ${media.map((mediaItem, index) => mediaThumbMarkup(mediaItem, item.name, index)).join('')}
+                </div>
+            `;
+            showMediaAt(0);
             modal.classList.add('active');
+        }
+
+        function mediaThumbMarkup(mediaItem, itemName, index) {
+            const content = mediaItem.type === 'video'
+                ? `<video src="${escapeHtml(mediaItem.url)}" muted playsinline preload="metadata"></video>`
+                : `<img src="${escapeHtml(mediaItem.url)}" alt="${escapeHtml(itemName)}">`;
+            return `<button type="button" class="media-thumb" onclick="showMediaAt(${index})" aria-label="${escapeHtml(currentLang === 'it' ? 'Apri media' : '查看图片')} ${index + 1}">${content}</button>`;
+        }
+
+        function showMediaAt(index) {
+            const stage = document.getElementById('media-viewer-stage');
+            const mediaItem = activeMediaList[index];
+            if (!stage || !mediaItem) return;
+            if (mediaItem.type === 'video') {
+                stage.innerHTML = `<video src="${escapeHtml(mediaItem.url)}" controls playsinline autoplay></video>`;
+            } else {
+                stage.innerHTML = `<img src="${escapeHtml(mediaItem.url)}" alt="${escapeHtml(activeMediaTitle)}">`;
+            }
+            document.querySelectorAll('.media-thumb').forEach((button, buttonIndex) => {
+                button.classList.toggle('active', buttonIndex === index);
+            });
         }
 
         async function deleteItem(category, id) {
@@ -1325,12 +1366,16 @@
         }
 
         function closeModal() {
-            document.getElementById('modal').classList.remove('active');
+            const modal = document.getElementById('modal');
+            modal.classList.remove('active');
+            modal.querySelector('.modal-content').classList.remove('media-viewer');
             document.getElementById('item-form').style.display = 'block';
             const gallery = document.getElementById('media-gallery');
             if (gallery) gallery.remove();
             editingId = null;
             currentCategory = null;
+            activeMediaList = [];
+            activeMediaTitle = '';
             clearImagePreview();
         }
 

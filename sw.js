@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vertex-carpi-v8';
+const CACHE_NAME = 'vertex-carpi-v9';
 const APP_SHELL = [
   './',
   './index.html',
