@@ -1,0 +1,18 @@
+{
+  "name": "Vertex Carpi Admin",
+  "short_name": "Vertex",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1f4f84",
+  "description": "Gestione mobile per prodotti Vertex Carpi",
+  "icons": [
+    {
+      "src": "vertex-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

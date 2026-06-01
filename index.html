@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1f4f84">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Vertex Admin">
     <title>Vertex Carpi | Riparazione Telefoni & Usato & Accessori</title>
+    <link rel="manifest" href="manifest.webmanifest">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -72,6 +76,17 @@
         .admin-only { display: none !important; }
         body.admin-mode .admin-only { display: inline-flex !important; }
         body.admin-mode div.admin-only { display: block !important; }
+
+        /* Mobile Admin App */
+        .mobile-admin-panel { display: none; background: #111827; color: #ffffff; border-radius: 10px; padding: 16px; margin-bottom: 24px; }
+        .mobile-admin-panel h2 { font-size: 1.05rem; margin-bottom: 12px; }
+        .mobile-admin-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+        .mobile-admin-actions button { border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.08); color: #ffffff; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+        .mobile-admin-actions button:hover { background: rgba(255,255,255,0.14); }
+        .admin-note { color: #d1d5db; font-size: 0.82rem; line-height: 1.5; margin-top: 12px; }
+        .image-preview { display: none; margin-top: 10px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #f9fafb; }
+        .image-preview img { width: 100%; max-height: 220px; object-fit: cover; display: block; }
+        .image-preview.active { display: block; }
         
         /* Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center; }
@@ -117,6 +132,8 @@
             .page-title { font-size: 1.6rem; }
             .modal-content { max-width: 100%; padding: 24px; }
             .info-row { flex-direction: column; gap: 6px; }
+            .mobile-admin-panel { border-radius: 0; margin-left: -16px; margin-right: -16px; }
+            body.admin-mode { padding-bottom: 12px; }
         }
     </style>
 </head>
@@ -156,6 +173,38 @@
 
     <!-- Main Container -->
     <div class="container">
+        <div class="mobile-admin-panel admin-only">
+            <h2 data-zh="手机管理" data-it="Gestione mobile">Gestione mobile</h2>
+            <div class="mobile-admin-actions">
+                <button type="button" onclick="openAddModal('usato')">
+                    <i class="fas fa-mobile-screen"></i>
+                    <span data-zh="添加二手机" data-it="Telefono usato">Telefono usato</span>
+                </button>
+                <button type="button" onclick="openAddModal('accessori')">
+                    <i class="fas fa-headphones"></i>
+                    <span data-zh="添加配件" data-it="Accessorio">Accessorio</span>
+                </button>
+                <button type="button" onclick="openAddModal('newproducts')">
+                    <i class="fas fa-star"></i>
+                    <span data-zh="添加新品" data-it="Nuovo arrivo">Nuovo arrivo</span>
+                </button>
+                <button type="button" onclick="openAddModal('discounts')">
+                    <i class="fas fa-tag"></i>
+                    <span data-zh="添加折扣" data-it="Sconto">Sconto</span>
+                </button>
+                <button type="button" onclick="exportInventory()">
+                    <i class="fas fa-download"></i>
+                    <span data-zh="导出备份" data-it="Esporta">Esporta</span>
+                </button>
+                <button type="button" onclick="document.getElementById('import-file').click()">
+                    <i class="fas fa-upload"></i>
+                    <span data-zh="导入备份" data-it="Importa">Importa</span>
+                </button>
+            </div>
+            <p class="admin-note" data-zh="手机上传的图片会自动压缩，适合快速更新库存。" data-it="Le foto caricate dal telefono vengono compresse automaticamente.">Le foto caricate dal telefono vengono compresse automaticamente.</p>
+            <input type="file" id="import-file" accept="application/json" style="display:none;" onchange="importInventory(event)">
+        </div>
+
         <!-- Store Info Tab -->
         <div id="info" class="tab-content active">
             <div class="hero-section">
@@ -375,7 +424,8 @@
                 
                 <div class="form-group">
                     <label class="form-label" data-zh="本地上传" data-it="Carica da file">Carica da file</label>
-                    <input type="file" id="form-image-file" class="form-input" accept="image/*">
+                    <input type="file" id="form-image-file" class="form-input" accept="image/*" capture="environment" onchange="previewSelectedImage(event)">
+                    <div id="image-preview" class="image-preview"></div>
                 </div>
                 <div class="form-group" id="form-image-group">
                     <label class="form-label" data-zh="图片链接" data-it="Foto URL">Foto URL</label>
@@ -624,6 +674,7 @@
             document.getElementById('modal-title').textContent = currentLang === 'it' ? 'Aggiungi' : '添加';
             document.getElementById('item-form').reset();
             document.getElementById('form-image-file').value = '';
+            clearImagePreview();
             toggleCategoryGroup(category);
             populateCategorySelect(category);
             document.getElementById('modal').classList.add('active');
@@ -668,6 +719,7 @@
             document.getElementById('form-price').value = item.price;
             document.getElementById('form-image-file').value = '';
             document.getElementById('form-image').value = item.image && !item.image.startsWith('data:') ? item.image : '';
+            showImagePreview(item.image);
             toggleCategoryGroup(category);
             populateCategorySelect(category);
             document.getElementById('form-category').value = item.category || '';
@@ -701,14 +753,65 @@
             };
 
             if (imageFile) {
-                const reader = new FileReader();
-                reader.onload = function () {
-                    saveData(reader.result);
-                };
-                reader.readAsDataURL(imageFile);
+                resizeImageFile(imageFile).then(saveData).catch(() => {
+                    const reader = new FileReader();
+                    reader.onload = function () {
+                        saveData(reader.result);
+                    };
+                    reader.readAsDataURL(imageFile);
+                });
             } else {
                 saveData(imageUrl);
             }
+        }
+
+        function resizeImageFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = reject;
+                reader.onload = () => {
+                    const img = new Image();
+                    img.onerror = reject;
+                    img.onload = () => {
+                        const maxSize = 1200;
+                        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.max(1, Math.round(img.width * scale));
+                        canvas.height = Math.max(1, Math.round(img.height * scale));
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.82));
+                    };
+                    img.src = reader.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function previewSelectedImage(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                clearImagePreview();
+                return;
+            }
+            resizeImageFile(file).then(showImagePreview).catch(clearImagePreview);
+        }
+
+        function showImagePreview(src) {
+            const preview = document.getElementById('image-preview');
+            if (!preview || !src) {
+                clearImagePreview();
+                return;
+            }
+            preview.innerHTML = `<img src="${isSafeImageUrl(src) ? escapeHtml(src) : ''}" alt="Preview">`;
+            preview.classList.add('active');
+        }
+
+        function clearImagePreview() {
+            const preview = document.getElementById('image-preview');
+            if (!preview) return;
+            preview.innerHTML = '';
+            preview.classList.remove('active');
         }
 
         function deleteItem(category, id) {
@@ -776,6 +879,46 @@
             saveVisitorList(visitors);
         }
 
+        function exportInventory() {
+            if (!requireAdmin()) return;
+            const data = {
+                exportedAt: new Date().toISOString(),
+                usato: getItems('usato'),
+                accessori: getItems('accessori'),
+                newproducts: getItems('newproducts'),
+                discounts: getItems('discounts')
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'vertex-inventory-backup.json';
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
+        function importInventory(event) {
+            if (!requireAdmin()) return;
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    const data = JSON.parse(reader.result);
+                    ['usato', 'accessori', 'newproducts', 'discounts'].forEach(category => {
+                        if (Array.isArray(data[category])) {
+                            saveItems(category, data[category]);
+                            loadItems(category);
+                        }
+                    });
+                    alert(currentLang === 'it' ? 'Inventario importato.' : '库存已导入。');
+                } catch (error) {
+                    alert(currentLang === 'it' ? 'File non valido.' : '文件格式不正确。');
+                }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
         function updateTrafficStats() {
             const visitors = getVisitorList();
             const uniqueIps = new Set(visitors.map(v => v.ip));
@@ -825,6 +968,7 @@
             document.getElementById('modal').classList.remove('active');
             editingId = null;
             currentCategory = null;
+            clearImagePreview();
         }
 
         document.addEventListener('click', (e) => {
@@ -839,6 +983,10 @@
                 closeModal();
             }
         });
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
 
         window.addEventListener('load', init);
     </script>
