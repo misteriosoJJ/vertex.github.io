@@ -616,7 +616,8 @@
         function initCloud() {
             cloudConfig.url = SUPABASE_URL || localStorage.getItem('vertexSupabaseUrl') || cloudConfig.url;
             cloudConfig.key = SUPABASE_ANON_KEY || localStorage.getItem('vertexSupabaseKey') || cloudConfig.key;
-            if (cloudConfig.url && cloudConfig.key && window.supabase) {
+            cloudEnabled = !!(cloudConfig.url && cloudConfig.key);
+            if (cloudEnabled && window.supabase) {
                 supabaseClient = window.supabase.createClient(cloudConfig.url, cloudConfig.key);
                 cloudEnabled = true;
                 supabaseClient.auth.getSession().then(({ data }) => {
@@ -634,10 +635,10 @@
         function updateCloudStatus() {
             const status = document.getElementById('cloud-status');
             if (!status) return;
-            if (!window.supabase) {
-                status.textContent = currentLang === 'it' ? 'Cloud non caricato - aggiorna la pagina' : '云端组件未加载 - 请刷新页面';
-            } else if (!cloudEnabled) {
+            if (!cloudEnabled) {
                 status.textContent = currentLang === 'it' ? 'Locale - cloud non configurato' : '本地模式 - 未配置云端';
+            } else if (!window.supabase) {
+                status.textContent = currentLang === 'it' ? 'Cloud lettura pubblica - login admin non disponibile' : '云端公开读取 - 管理登录组件未加载';
             } else if (!cloudSignedIn) {
                 status.textContent = currentLang === 'it' ? 'Cloud lettura pubblica - admin non loggato' : '云端公开读取 - 管理员未登录';
             } else {
@@ -762,19 +763,27 @@
         }
 
         async function getCloudItems(category) {
-            if (!cloudEnabled || !supabaseClient) return null;
-            const { data, error } = await supabaseClient
-                .from('products')
-                .select('*')
-                .eq('section', category)
-                .order('created_at', { ascending: false });
-            if (error) {
-                console.warn(error);
-                return null;
-            }
+            if (!cloudEnabled) return null;
+            const data = await fetchCloudProducts(category);
+            if (!data) return null;
             const items = data.map(cloudRowToItem);
             saveItems(category, items);
             return items;
+        }
+
+        async function fetchCloudProducts(category) {
+            const query = `section=eq.${encodeURIComponent(category)}&select=*&order=created_at.desc`;
+            const response = await fetch(`${cloudConfig.url}/rest/v1/products?${query}`, {
+                headers: {
+                    apikey: cloudConfig.key,
+                    Authorization: `Bearer ${cloudConfig.key}`
+                }
+            });
+            if (!response.ok) {
+                console.warn(await response.text());
+                return null;
+            }
+            return response.json();
         }
 
         async function refreshAllItems() {
