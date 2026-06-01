@@ -9,9 +9,13 @@ create table if not exists public.products (
   price numeric(10, 2) not null default 0,
   item_category text default '',
   image_url text default '',
+  media jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.products
+add column if not exists media jsonb not null default '[]'::jsonb;
 
 alter table public.products enable row level security;
 

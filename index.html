@@ -61,7 +61,8 @@
         .item-card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; position: relative; box-shadow: 0 10px 24px rgba(17, 24, 39, 0.04); transition: transform 0.2s, box-shadow 0.2s; }
         .item-card:hover { transform: translateY(-2px); box-shadow: 0 18px 32px rgba(17, 24, 39, 0.08); }
         .item-image { width: 100%; aspect-ratio: 4 / 3; margin-bottom: 14px; overflow: hidden; border-radius: 8px; background: #f3f4f6; }
-        .item-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .item-image img, .item-image video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .media-count { position: absolute; top: 24px; right: 24px; background: rgba(17, 24, 39, 0.82); color: #fff; border-radius: 999px; padding: 5px 9px; font-size: 0.78rem; font-weight: 700; }
         .item-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; color: #1f2937; }
         .item-desc { font-size: 0.9rem; color: #666; margin-bottom: 12px; line-height: 1.5; }
         .item-price { font-size: 1.25rem; font-weight: 700; color: #1f4f84; margin-bottom: 12px; }
@@ -85,9 +86,12 @@
         .mobile-admin-actions button { border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.08); color: #ffffff; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; }
         .mobile-admin-actions button:hover { background: rgba(255,255,255,0.14); }
         .admin-note { color: #d1d5db; font-size: 0.82rem; line-height: 1.5; margin-top: 12px; }
-        .image-preview { display: none; margin-top: 10px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #f9fafb; }
-        .image-preview img { width: 100%; max-height: 220px; object-fit: cover; display: block; }
+        .image-preview { display: none; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 10px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; background: #f9fafb; }
+        .image-preview img, .image-preview video { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; border-radius: 6px; background: #e5e7eb; }
         .image-preview.active { display: block; }
+        .image-preview.active { display: grid; }
+        .media-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .media-gallery img, .media-gallery video { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; background: #f3f4f6; }
         
         /* Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center; }
@@ -459,7 +463,7 @@
                 
                 <div class="form-group">
                     <label class="form-label" data-zh="本地上传" data-it="Carica da file">Carica da file</label>
-                    <input type="file" id="form-image-file" class="form-input" accept="image/*" onchange="previewSelectedImage(event)">
+                    <input type="file" id="form-image-file" class="form-input" accept="image/*,video/*" multiple onchange="previewSelectedMedia(event)">
                     <div id="image-preview" class="image-preview"></div>
                 </div>
                 <div class="form-group" id="form-image-group">
@@ -730,17 +734,20 @@
         }
 
         function cloudRowToItem(row) {
+            const media = Array.isArray(row.media) ? row.media : (row.image_url ? [{ type: 'image', url: row.image_url }] : []);
             return {
                 id: row.id,
                 name: row.name,
                 desc: row.description || '',
                 price: row.price,
                 category: row.item_category || '',
-                image: row.image_url || ''
+                image: row.image_url || media[0]?.url || '',
+                media
             };
         }
 
         function itemToCloudRow(item, section) {
+            const media = getItemMedia(item);
             return {
                 id: item.id,
                 section,
@@ -748,7 +755,8 @@
                 description: item.desc,
                 price: Number(item.price || 0),
                 item_category: item.category || '',
-                image_url: item.image || '',
+                image_url: media[0]?.url || item.image || '',
+                media,
                 updated_at: new Date().toISOString()
             };
         }
@@ -788,8 +796,25 @@
             }[char]));
         }
 
-        function isSafeImageUrl(url) {
-            return /^(https?:|data:image\/|blob:)/i.test(String(url || ''));
+        function isSafeMediaUrl(url) {
+            return /^(https?:|data:image\/|data:video\/|blob:)/i.test(String(url || ''));
+        }
+
+        function getItemMedia(item) {
+            if (Array.isArray(item.media) && item.media.length) {
+                return item.media.filter(media => media && isSafeMediaUrl(media.url));
+            }
+            return item.image ? [{ type: 'image', url: item.image }] : [];
+        }
+
+        function mediaMarkup(media, altText) {
+            if (!media || !isSafeMediaUrl(media.url)) return '';
+            const safeUrl = escapeHtml(media.url);
+            const safeAlt = escapeHtml(altText);
+            if (media.type === 'video') {
+                return `<video src="${safeUrl}" muted playsinline preload="metadata"></video>`;
+            }
+            return `<img src="${safeUrl}" alt="${safeAlt}">`;
         }
 
         async function loadItems(category) {
@@ -808,8 +833,9 @@
                 card.className = 'item-card';
                 const safeName = escapeHtml(item.name);
                 const safeDesc = escapeHtml(item.desc);
-                const safeImage = isSafeImageUrl(item.image) ? escapeHtml(item.image) : '';
-                const imageMarkup = safeImage ? `<div class="item-image"><img src="${safeImage}" alt="${safeName}"></div>` : '';
+                const media = getItemMedia(item);
+                const coverMarkup = mediaMarkup(media[0], item.name);
+                const imageMarkup = coverMarkup ? `<div class="item-image" onclick="openMediaModal('${category}', '${safeId}')">${coverMarkup}</div>${media.length > 1 ? `<span class="media-count">+${media.length}</span>` : ''}` : '';
                 const categoryLabel = item.category ? getCategoryLabel(item.category) : '';
                 const safeId = escapeHtml(item.id);
                 card.innerHTML = `
@@ -818,6 +844,7 @@
                     <p class="item-desc">${categoryLabel ? '<strong>' + escapeHtml(categoryLabel) + '</strong><br>' : ''}${safeDesc}</p>
                     <p class="item-price">€${parseFloat(item.price).toFixed(2)}</p>
                     <div class="item-actions">
+                        ${media.length ? `<button class="item-btn" onclick="openMediaModal('${category}', '${safeId}')" data-it="Foto/Video" data-zh="图片/视频">Foto/Video</button>` : ''}
                         <button class="item-btn" onclick="askProduct('${category}', '${safeId}')" data-it="WhatsApp" data-zh="咨询">WhatsApp</button>
                         ${isAdmin ? `<button class="item-btn admin-only" onclick="editItem('${category}', '${safeId}')" data-it="Modifica" data-zh="编辑">Modifica</button>
                         <button class="item-btn delete admin-only" onclick="deleteItem('${category}', '${safeId}')" data-it="Elimina" data-zh="删除">Elimina</button>` : ''}
@@ -838,6 +865,9 @@
             currentCategory = category;
             editingId = null;
             document.getElementById('modal-title').textContent = currentLang === 'it' ? 'Aggiungi' : '添加';
+            document.getElementById('item-form').style.display = 'block';
+            const gallery = document.getElementById('media-gallery');
+            if (gallery) gallery.remove();
             document.getElementById('item-form').reset();
             document.getElementById('form-image-file').value = '';
             clearImagePreview();
@@ -880,12 +910,15 @@
             currentCategory = category;
             editingId = id;
             document.getElementById('modal-title').textContent = currentLang === 'it' ? 'Modifica' : '编辑';
+            document.getElementById('item-form').style.display = 'block';
+            const gallery = document.getElementById('media-gallery');
+            if (gallery) gallery.remove();
             document.getElementById('form-name').value = item.name;
             document.getElementById('form-desc').value = item.desc;
             document.getElementById('form-price').value = item.price;
             document.getElementById('form-image-file').value = '';
             document.getElementById('form-image').value = item.image && !item.image.startsWith('data:') ? item.image : '';
-            showImagePreview(item.image);
+            showMediaPreview(getItemMedia(item));
             toggleCategoryGroup(category);
             populateCategorySelect(category);
             document.getElementById('form-category').value = item.category || '';
@@ -900,14 +933,18 @@
             const price = document.getElementById('form-price').value;
             const category = document.getElementById('form-category').value;
             const imageUrl = document.getElementById('form-image').value.trim();
-            const imageFile = document.getElementById('form-image-file').files[0];
+            const mediaFiles = Array.from(document.getElementById('form-image-file').files || []);
 
-            const saveData = async (image) => {
+            const saveData = async (mediaList) => {
                 let items = getItems(currentCategory);
-                if (editingId !== null && !image) {
-                    image = items.find(entry => entry.id === editingId)?.image || '';
+                const existing = editingId !== null ? items.find(entry => entry.id === editingId) : null;
+                if (!mediaList.length && imageUrl) {
+                    mediaList = [{ type: 'image', url: imageUrl }];
                 }
-                const newItem = { id: editingId || createId(), name, desc, price, category: (currentCategory === 'usato' || currentCategory === 'accessori') ? category : '', image };
+                if (editingId !== null && !mediaList.length) {
+                    mediaList = getItemMedia(existing || {});
+                }
+                const newItem = { id: editingId || createId(), name, desc, price, category: (currentCategory === 'usato' || currentCategory === 'accessori') ? category : '', image: mediaList[0]?.url || '', media: mediaList };
                 if (cloudEnabled && supabaseClient) {
                     if (!cloudSignedIn) {
                         alert(currentLang === 'it' ? 'Accedi al cloud prima di salvare.' : '请先登录云后台再保存。');
@@ -929,29 +966,47 @@
                 closeModal();
             };
 
-            if (imageFile) {
-                resizeImageFile(imageFile).then(uploadImageToCloud).then(saveData).catch(() => {
-                    const reader = new FileReader();
-                    reader.onload = function () {
-                        saveData(reader.result);
-                    };
-                    reader.readAsDataURL(imageFile);
+            if (mediaFiles.length) {
+                Promise.all(mediaFiles.map(prepareMediaFile)).then(saveData).catch(error => {
+                    alert(error.message || (currentLang === 'it' ? 'Caricamento media non riuscito.' : '媒体上传失败。'));
                 });
             } else {
-                saveData(imageUrl);
+                saveData([]);
             }
         }
 
-        async function uploadImageToCloud(dataUrl) {
+        async function prepareMediaFile(file) {
+            const mediaType = file.type.startsWith('video/') ? 'video' : 'image';
+            const dataUrl = mediaType === 'image' ? await resizeImageFile(file) : await readFileAsDataUrl(file);
+            const url = await uploadMediaToCloud(dataUrl, mediaType, file.type);
+            return { type: mediaType, url };
+        }
+
+        function readFileAsDataUrl(file) {
+            return new Promise((resolve, reject) => {
+                const maxVideoSize = 45 * 1024 * 1024;
+                if (file.type.startsWith('video/') && file.size > maxVideoSize) {
+                    reject(new Error(currentLang === 'it' ? 'Video troppo grande. Usa un video sotto 45MB.' : '视频太大，请使用 45MB 以下的视频。'));
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onerror = reject;
+                reader.onload = () => resolve(reader.result);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function uploadMediaToCloud(dataUrl, mediaType, contentType) {
             if (!cloudEnabled || !supabaseClient || !cloudSignedIn || !dataUrl.startsWith('data:')) {
                 return dataUrl;
             }
             const response = await fetch(dataUrl);
             const blob = await response.blob();
-            const filePath = `${currentCategory}/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+            const extension = mediaType === 'video' ? 'mp4' : 'jpg';
+            const filePath = `${currentCategory}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
             const { error } = await supabaseClient.storage
                 .from('product-images')
-                .upload(filePath, blob, { contentType: 'image/jpeg', upsert: true });
+                .upload(filePath, blob, { contentType: contentType || (mediaType === 'video' ? 'video/mp4' : 'image/jpeg'), upsert: true });
             if (error) throw error;
             const { data } = supabaseClient.storage.from('product-images').getPublicUrl(filePath);
             return data.publicUrl;
@@ -980,22 +1035,27 @@
             });
         }
 
-        function previewSelectedImage(event) {
-            const file = event.target.files[0];
-            if (!file) {
+        function previewSelectedMedia(event) {
+            const files = Array.from(event.target.files || []);
+            if (!files.length) {
                 clearImagePreview();
                 return;
             }
-            resizeImageFile(file).then(showImagePreview).catch(clearImagePreview);
+            Promise.all(files.map(file => {
+                if (file.type.startsWith('video/')) {
+                    return readFileAsDataUrl(file).then(url => ({ type: 'video', url }));
+                }
+                return resizeImageFile(file).then(url => ({ type: 'image', url }));
+            })).then(showMediaPreview).catch(clearImagePreview);
         }
 
-        function showImagePreview(src) {
+        function showMediaPreview(mediaList) {
             const preview = document.getElementById('image-preview');
-            if (!preview || !src) {
+            if (!preview || !mediaList || !mediaList.length) {
                 clearImagePreview();
                 return;
             }
-            preview.innerHTML = `<img src="${isSafeImageUrl(src) ? escapeHtml(src) : ''}" alt="Preview">`;
+            preview.innerHTML = mediaList.map(media => mediaMarkup(media, 'Preview')).join('');
             preview.classList.add('active');
         }
 
@@ -1004,6 +1064,30 @@
             if (!preview) return;
             preview.innerHTML = '';
             preview.classList.remove('active');
+        }
+
+        function openMediaModal(category, id) {
+            const item = getItems(category).find(entry => entry.id === id);
+            if (!item) return;
+            const media = getItemMedia(item);
+            if (!media.length) return;
+            const modal = document.getElementById('modal');
+            document.getElementById('modal-title').textContent = item.name;
+            document.getElementById('item-form').style.display = 'none';
+            let gallery = document.getElementById('media-gallery');
+            if (!gallery) {
+                gallery = document.createElement('div');
+                gallery.id = 'media-gallery';
+                gallery.className = 'media-gallery';
+                document.querySelector('.modal-content').appendChild(gallery);
+            }
+            gallery.innerHTML = media.map(mediaItem => {
+                if (mediaItem.type === 'video') {
+                    return `<video src="${escapeHtml(mediaItem.url)}" controls playsinline></video>`;
+                }
+                return `<img src="${escapeHtml(mediaItem.url)}" alt="${escapeHtml(item.name)}">`;
+            }).join('');
+            modal.classList.add('active');
         }
 
         async function deleteItem(category, id) {
@@ -1200,6 +1284,9 @@
 
         function closeModal() {
             document.getElementById('modal').classList.remove('active');
+            document.getElementById('item-form').style.display = 'block';
+            const gallery = document.getElementById('media-gallery');
+            if (gallery) gallery.remove();
             editingId = null;
             currentCategory = null;
             clearImagePreview();
