@@ -66,6 +66,7 @@
         .items-empty { border: 1px dashed #cbd5e1; border-radius: 8px; padding: 18px; color: #64748b; background: #f8fafc; text-align: center; }
         .item-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; color: #1f2937; }
         .item-desc { font-size: 0.9rem; color: #666; margin-bottom: 12px; line-height: 1.5; }
+        .item-deadline { display: inline-flex; margin: 0 0 10px; padding: 5px 8px; border-radius: 999px; background: #fff7ed; color: #c2410c; font-size: 0.78rem; font-weight: 700; }
         .item-price { font-size: 1.25rem; font-weight: 700; color: #1f4f84; margin-bottom: 12px; }
         .item-actions { display: flex; gap: 8px; flex-wrap: wrap; }
         .item-btn { background: none; border: 1px solid #d1d5db; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: #666; transition: all 0.3s; }
@@ -371,6 +372,10 @@
                 <h1 class="page-title" data-zh="折扣产品" data-it="Sconti">Sconti</h1>
                 <p class="page-subtitle" data-zh="展示折扣商品" data-it="Mostra i prodotti in sconto">Mostra i prodotti in sconto</p>
             </div>
+            <div class="form-group">
+                <label class="form-label" data-zh="折扣分类" data-it="Tipo sconto">Tipo sconto</label>
+                <select id="discounts-filter" class="form-input" onchange="updateFilter('discounts')"></select>
+            </div>
             <button class="add-btn admin-only" onclick="openAddModal('discounts')">
                 <i class="fas fa-plus"></i> <span data-zh="添加折扣" data-it="Aggiungi Sconto">Aggiungi Sconto</span>
             </button>
@@ -462,7 +467,12 @@
                 
                 <div class="form-group" id="form-category-group">
                     <label class="form-label" data-zh="分类" data-it="Categoria">Categoria</label>
-                    <select id="form-category" class="form-input"></select>
+                    <select id="form-category" class="form-input" onchange="toggleDiscountExpiry()"></select>
+                </div>
+
+                <div class="form-group" id="form-expiry-group" style="display:none;">
+                    <label class="form-label" data-zh="限时结束时间" data-it="Fine offerta">Fine offerta</label>
+                    <input type="datetime-local" id="form-expiry" class="form-input">
                 </div>
                 
                 <div class="form-group">
@@ -505,7 +515,7 @@
         let currentCategory = null;
         let editingId = null;
         let isAdmin = sessionStorage.getItem('vertexAdmin') === 'true';
-        const currentFilter = { usato: 'all', accessori: 'all' };
+        const currentFilter = { usato: 'all', accessori: 'all', discounts: 'all' };
         const adminPassword = 'vertex2026';
         const SUPABASE_URL = 'https://yxijbkrdwxhdrofnskdo.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4aWpia3Jkd3hoZHJvZm5za2RvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMTIxMDYsImV4cCI6MjA5NTg4ODEwNn0.odsPpyb7_ljy-HvnPxAIuWOfnBSH57L5YI2CeD4kEL8';
@@ -534,6 +544,13 @@
                 { value: 'Cavi', it: 'Cavi', zh: '数据线' },
                 { value: 'Auricolari', it: 'Auricolari', zh: '耳机' },
                 { value: 'Altro', it: 'Altro', zh: '其他' }
+            ],
+            discounts: [
+                { value: 'all', it: 'Tutti', zh: '全部' },
+                { value: 'phone-discount', it: 'Sconti telefoni', zh: '手机折扣' },
+                { value: 'repair-discount', it: 'Sconti riparazioni', zh: '维修折扣' },
+                { value: 'item-discount', it: 'Sconti articoli', zh: '物品折扣' },
+                { value: 'limited-discount', it: 'Offerte a tempo', zh: '限时折扣' }
             ]
         };
 
@@ -545,7 +562,11 @@
             Altro: { it: 'Altro', zh: '其他' },
             Custodie: { it: 'Custodie', zh: '手机壳' },
             Cavi: { it: 'Cavi', zh: '数据线' },
-            Auricolari: { it: 'Auricolari', zh: '耳机' }
+            Auricolari: { it: 'Auricolari', zh: '耳机' },
+            'phone-discount': { it: 'Sconti telefoni', zh: '手机折扣' },
+            'repair-discount': { it: 'Sconti riparazioni', zh: '维修折扣' },
+            'item-discount': { it: 'Sconti articoli', zh: '物品折扣' },
+            'limited-discount': { it: 'Offerte a tempo', zh: '限时折扣' }
         };
 
         async function init() {
@@ -557,6 +578,7 @@
             });
             populateFilterOptions('usato');
             populateFilterOptions('accessori');
+            populateFilterOptions('discounts');
             await refreshAllItems();
             updateLanguage();
             renderVisitorList();
@@ -587,6 +609,7 @@
             });
             populateFilterOptions('usato');
             populateFilterOptions('accessori');
+            populateFilterOptions('discounts');
             await refreshAllItems();
             renderVisitorList();
             updateTrafficStats();
@@ -752,6 +775,7 @@
 
         function cloudRowToItem(row) {
             const media = Array.isArray(row.media) ? row.media : (row.image_url ? [{ type: 'image', url: row.image_url }] : []);
+            const meta = media.find(item => item && item.type === 'meta') || {};
             return {
                 id: row.id,
                 name: row.name,
@@ -759,12 +783,14 @@
                 price: row.price,
                 category: row.item_category || '',
                 image: row.image_url || media[0]?.url || '',
-                media
+                media,
+                expiresAt: meta.expiresAt || ''
             };
         }
 
         function itemToCloudRow(item, section) {
             const media = getItemMedia(item);
+            const mediaWithMeta = item.expiresAt ? [...media, { type: 'meta', expiresAt: item.expiresAt }] : media;
             return {
                 id: item.id,
                 section,
@@ -773,7 +799,7 @@
                 price: Number(item.price || 0),
                 item_category: item.category || '',
                 image_url: media[0]?.url || item.image || '',
-                media,
+                media: mediaWithMeta,
                 updated_at: new Date().toISOString()
             };
         }
@@ -857,6 +883,36 @@
             return item.image ? [{ type: 'image', url: item.image }] : [];
         }
 
+        function isExpiredLimitedDiscount(item) {
+            return item.category === 'limited-discount' && item.expiresAt && new Date(item.expiresAt).getTime() <= Date.now();
+        }
+
+        function formatExpiry(expiresAt) {
+            if (!expiresAt) return '';
+            const date = new Date(expiresAt);
+            if (Number.isNaN(date.getTime())) return '';
+            return date.toLocaleString(currentLang === 'it' ? 'it-IT' : 'zh-CN', {
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function toLocalInputValue(expiresAt) {
+            if (!expiresAt) return '';
+            const date = new Date(expiresAt);
+            if (Number.isNaN(date.getTime())) return '';
+            const offset = date.getTimezoneOffset() * 60000;
+            return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+        }
+
+        function toIsoFromLocalInput(value) {
+            if (!value) return '';
+            const date = new Date(value);
+            return Number.isNaN(date.getTime()) ? '' : date.toISOString();
+        }
+
         function mediaMarkup(media, altText) {
             if (!media || !isSafeMediaUrl(media.url)) return '';
             const safeUrl = escapeHtml(media.url);
@@ -874,6 +930,7 @@
             grid.innerHTML = '';
 
             const filteredItems = items.filter(item => {
+                if (category === 'discounts' && isExpiredLimitedDiscount(item)) return false;
                 const filterValue = currentFilter[category] || 'all';
                 return filterValue === 'all' || item.category === filterValue;
             });
@@ -888,10 +945,13 @@
                 const categoryLabel = item.category ? getCategoryLabel(item.category) : '';
                 const safeId = escapeHtml(item.id);
                 const imageMarkup = coverMarkup ? `<div class="item-image" onclick="openMediaModal('${category}', '${safeId}')">${coverMarkup}</div>${media.length > 1 ? `<span class="media-count">+${media.length}</span>` : ''}` : '';
+                const deadline = category === 'discounts' && item.category === 'limited-discount' && item.expiresAt ? formatExpiry(item.expiresAt) : '';
+                const deadlineMarkup = deadline ? `<div class="item-deadline">${currentLang === 'it' ? 'Fino a ' : '截止 '} ${escapeHtml(deadline)}</div>` : '';
                 card.innerHTML = `
                     ${imageMarkup}
                     <h3>${safeName}</h3>
                     <p class="item-desc">${categoryLabel ? '<strong>' + escapeHtml(categoryLabel) + '</strong><br>' : ''}${safeDesc}</p>
+                    ${deadlineMarkup}
                     <p class="item-price">€${parseFloat(item.price).toFixed(2)}</p>
                     <div class="item-actions">
                         ${media.length ? `<button class="item-btn" onclick="openMediaModal('${category}', '${safeId}')" data-it="Foto/Video" data-zh="图片/视频">Foto/Video</button>` : ''}
@@ -927,9 +987,11 @@
             if (gallery) gallery.remove();
             document.getElementById('item-form').reset();
             document.getElementById('form-image-file').value = '';
+            document.getElementById('form-expiry').value = '';
             clearImagePreview();
             toggleCategoryGroup(category);
             populateCategorySelect(category);
+            toggleDiscountExpiry();
             document.getElementById('modal').classList.add('active');
         }
 
@@ -937,13 +999,25 @@
             const group = document.getElementById('form-category-group');
             const select = document.getElementById('form-category');
             if (!group || !select) return;
-            if (category === 'usato' || category === 'accessori') {
+            if (category === 'usato' || category === 'accessori' || category === 'discounts') {
                 group.style.display = 'block';
                 select.required = true;
             } else {
                 group.style.display = 'none';
                 select.required = false;
             }
+            toggleDiscountExpiry();
+        }
+
+        function toggleDiscountExpiry() {
+            const group = document.getElementById('form-expiry-group');
+            const input = document.getElementById('form-expiry');
+            const select = document.getElementById('form-category');
+            if (!group || !input || !select) return;
+            const show = currentCategory === 'discounts' && select.value === 'limited-discount';
+            group.style.display = show ? 'block' : 'none';
+            input.required = show;
+            if (!show) input.value = '';
         }
 
         function populateCategorySelect(category) {
@@ -979,6 +1053,8 @@
             toggleCategoryGroup(category);
             populateCategorySelect(category);
             document.getElementById('form-category').value = item.category || '';
+            document.getElementById('form-expiry').value = toLocalInputValue(item.expiresAt);
+            toggleDiscountExpiry();
             document.getElementById('modal').classList.add('active');
         }
 
@@ -989,8 +1065,14 @@
             const desc = document.getElementById('form-desc').value.trim();
             const price = document.getElementById('form-price').value;
             const category = document.getElementById('form-category').value;
+            const expiryInput = document.getElementById('form-expiry').value;
             const imageUrl = document.getElementById('form-image').value.trim();
             const mediaFiles = Array.from(document.getElementById('form-image-file').files || []);
+            const expiresAt = currentCategory === 'discounts' && category === 'limited-discount' ? toIsoFromLocalInput(expiryInput) : '';
+            if (currentCategory === 'discounts' && category === 'limited-discount' && !expiresAt) {
+                alert(currentLang === 'it' ? "Scegli la fine dell'offerta a tempo." : '请选择限时折扣结束时间。');
+                return;
+            }
 
             const saveData = async (mediaList) => {
                 let items = getItems(currentCategory);
@@ -1001,7 +1083,7 @@
                 if (editingId !== null && !mediaList.length) {
                     mediaList = getItemMedia(existing || {});
                 }
-                const newItem = { id: editingId || createId(), name, desc, price, category: (currentCategory === 'usato' || currentCategory === 'accessori') ? category : '', image: mediaList[0]?.url || '', media: mediaList };
+                const newItem = { id: editingId || createId(), name, desc, price, category: (currentCategory === 'usato' || currentCategory === 'accessori' || currentCategory === 'discounts') ? category : '', image: mediaList[0]?.url || '', media: mediaList, expiresAt };
                 if (cloudEnabled && supabaseClient) {
                     if (!cloudSignedIn) {
                         alert(currentLang === 'it' ? 'Accedi al cloud prima di salvare.' : '请先登录云后台再保存。');
