@@ -69,6 +69,9 @@
         .add-btn { background: #1f4f84; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-bottom: 24px; transition: all 0.3s; }
         .add-btn:hover { background: #1a3f66; }
         .add-btn i { margin-right: 8px; }
+        .admin-only { display: none !important; }
+        body.admin-mode .admin-only { display: inline-flex !important; }
+        body.admin-mode div.admin-only { display: block !important; }
         
         /* Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center; }
@@ -260,7 +263,7 @@
                 <label class="form-label" data-zh="分类" data-it="Categoria">Categoria</label>
                 <select id="usato-filter" class="form-input" onchange="updateFilter('usato')"></select>
             </div>
-            <button class="add-btn" onclick="openAddModal('usato')">
+            <button class="add-btn admin-only" onclick="openAddModal('usato')">
                 <i class="fas fa-plus"></i> <span data-zh="添加二手手机" data-it="Aggiungi Telefono">Aggiungi Telefono</span>
             </button>
             <div class="items-grid" id="usato-grid"></div>
@@ -276,7 +279,7 @@
                 <label class="form-label" data-zh="分类" data-it="Categoria">Categoria</label>
                 <select id="accessori-filter" class="form-input" onchange="updateFilter('accessori')"></select>
             </div>
-            <button class="add-btn" onclick="openAddModal('accessori')">
+            <button class="add-btn admin-only" onclick="openAddModal('accessori')">
                 <i class="fas fa-plus"></i> <span data-zh="添加配件" data-it="Aggiungi Accessorio">Aggiungi Accessorio</span>
             </button>
             <div class="items-grid" id="accessori-grid"></div>
@@ -288,7 +291,7 @@
                 <h1 class="page-title" data-zh="新款上市" data-it="Nuovi Arrivi">Nuovi Arrivi</h1>
                 <p class="page-subtitle" data-zh="展示最新产品" data-it="Mostra i nuovi arrivi">Mostra i nuovi arrivi</p>
             </div>
-            <button class="add-btn" onclick="openAddModal('newproducts')">
+            <button class="add-btn admin-only" onclick="openAddModal('newproducts')">
                 <i class="fas fa-plus"></i> <span data-zh="添加新款" data-it="Aggiungi Nuovo">Aggiungi Nuovo</span>
             </button>
             <div class="items-grid" id="newproducts-grid"></div>
@@ -300,7 +303,7 @@
                 <h1 class="page-title" data-zh="折扣产品" data-it="Sconti">Sconti</h1>
                 <p class="page-subtitle" data-zh="展示折扣商品" data-it="Mostra i prodotti in sconto">Mostra i prodotti in sconto</p>
             </div>
-            <button class="add-btn" onclick="openAddModal('discounts')">
+            <button class="add-btn admin-only" onclick="openAddModal('discounts')">
                 <i class="fas fa-plus"></i> <span data-zh="添加折扣" data-it="Aggiungi Sconto">Aggiungi Sconto</span>
             </button>
             <div class="items-grid" id="discounts-grid"></div>
@@ -336,7 +339,7 @@
                     <span data-zh="访客名单" data-it="Lista visitatori">Lista visitatori</span>
                 </div>
                 <div id="visitor-list"></div>
-                <button class="add-btn" onclick="showAddVisitor()">
+                <button class="add-btn admin-only" onclick="showAddVisitor()">
                     <i class="fas fa-user-plus"></i> <span data-zh="添加访客" data-it="Aggiungi visitatore">Aggiungi visitatore</span>
                 </button>
             </div>
@@ -398,6 +401,7 @@
         let currentLang = localStorage.getItem('vertexLang') || 'it';
         let currentCategory = null;
         let editingId = null;
+        let isAdmin = sessionStorage.getItem('vertexAdmin') === 'true';
         const currentFilter = { usato: 'all', accessori: 'all' };
         const adminPassword = 'vertex2026';
 
@@ -432,6 +436,7 @@
 
         function init() {
             document.documentElement.lang = currentLang;
+            updateAdminMode();
             document.querySelectorAll('.lang-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.textContent.trim() === (currentLang === 'it' ? 'IT' : '中文'));
             });
@@ -494,10 +499,27 @@
         function openBackend() {
             const password = prompt(currentLang === 'it' ? 'Password area admin:' : '请输入管理密码：');
             if (password === adminPassword) {
+                isAdmin = true;
+                sessionStorage.setItem('vertexAdmin', 'true');
+                updateAdminMode();
                 switchTab('backend');
             } else if (password) {
                 alert(currentLang === 'it' ? 'Password non corretta.' : '密码不正确。');
             }
+        }
+
+        function updateAdminMode() {
+            document.body.classList.toggle('admin-mode', isAdmin);
+            loadItems('usato');
+            loadItems('accessori');
+            loadItems('newproducts');
+            loadItems('discounts');
+        }
+
+        function requireAdmin() {
+            if (isAdmin) return true;
+            alert(currentLang === 'it' ? 'Solo amministratore.' : '只有管理员可以修改。');
+            return false;
         }
 
         function populateFilterOptions(category) {
@@ -581,8 +603,8 @@
                     <p class="item-price">€${parseFloat(item.price).toFixed(2)}</p>
                     <div class="item-actions">
                         <button class="item-btn" onclick="askProduct('${category}', '${safeId}')" data-it="WhatsApp" data-zh="咨询">WhatsApp</button>
-                        <button class="item-btn" onclick="editItem('${category}', '${safeId}')" data-it="Modifica" data-zh="编辑">Modifica</button>
-                        <button class="item-btn delete" onclick="deleteItem('${category}', '${safeId}')" data-it="Elimina" data-zh="删除">Elimina</button>
+                        ${isAdmin ? `<button class="item-btn admin-only" onclick="editItem('${category}', '${safeId}')" data-it="Modifica" data-zh="编辑">Modifica</button>
+                        <button class="item-btn delete admin-only" onclick="deleteItem('${category}', '${safeId}')" data-it="Elimina" data-zh="删除">Elimina</button>` : ''}
                     </div>
                 `;
                 grid.appendChild(card);
@@ -596,6 +618,7 @@
         }
 
         function openAddModal(category) {
+            if (!requireAdmin()) return;
             currentCategory = category;
             editingId = null;
             document.getElementById('modal-title').textContent = currentLang === 'it' ? 'Aggiungi' : '添加';
@@ -633,6 +656,7 @@
         }
 
         function editItem(category, id) {
+            if (!requireAdmin()) return;
             const items = getItems(category);
             const item = items.find(entry => entry.id === id);
             if (!item) return;
@@ -652,6 +676,7 @@
 
         function saveItem(event) {
             event.preventDefault();
+            if (!requireAdmin()) return;
             const name = document.getElementById('form-name').value.trim();
             const desc = document.getElementById('form-desc').value.trim();
             const price = document.getElementById('form-price').value;
@@ -687,6 +712,7 @@
         }
 
         function deleteItem(category, id) {
+            if (!requireAdmin()) return;
             const message = currentLang === 'it' ? 'Eliminare questo prodotto?' : '确定删除这个商品吗？';
             if (!confirm(message)) return;
             const items = getItems(category).filter(item => item.id !== id);
@@ -735,6 +761,7 @@
         }
 
         function showAddVisitor() {
+            if (!requireAdmin()) return;
             const ip = prompt(currentLang === 'it' ? 'Inserisci IP visitatore:' : '请输入访客IP：');
             const page = prompt(currentLang === 'it' ? 'Inserisci pagina名称:' : '请输入页面名称：');
             if (ip && page) {
