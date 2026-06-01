@@ -610,6 +610,8 @@
         }
 
         function initCloud() {
+            cloudConfig.url = SUPABASE_URL || localStorage.getItem('vertexSupabaseUrl') || cloudConfig.url;
+            cloudConfig.key = SUPABASE_ANON_KEY || localStorage.getItem('vertexSupabaseKey') || cloudConfig.key;
             if (cloudConfig.url && cloudConfig.key && window.supabase) {
                 supabaseClient = window.supabase.createClient(cloudConfig.url, cloudConfig.key);
                 cloudEnabled = true;
@@ -628,7 +630,9 @@
         function updateCloudStatus() {
             const status = document.getElementById('cloud-status');
             if (!status) return;
-            if (!cloudEnabled) {
+            if (!window.supabase) {
+                status.textContent = currentLang === 'it' ? 'Cloud non caricato - aggiorna la pagina' : '云端组件未加载 - 请刷新页面';
+            } else if (!cloudEnabled) {
                 status.textContent = currentLang === 'it' ? 'Locale - cloud non configurato' : '本地模式 - 未配置云端';
             } else if (!cloudSignedIn) {
                 status.textContent = currentLang === 'it' ? 'Cloud lettura pubblica - admin non loggato' : '云端公开读取 - 管理员未登录';
@@ -647,25 +651,35 @@
             }
             localStorage.setItem('vertexSupabaseUrl', url);
             localStorage.setItem('vertexSupabaseKey', key);
-            alert(currentLang === 'it' ? 'Impostazioni salvate. Ricarica la pagina.' : '云设置已保存，请刷新页面。');
+            cloudConfig.url = url;
+            cloudConfig.key = key;
+            initCloud();
+            alert(currentLang === 'it' ? 'Impostazioni salvate.' : '云设置已保存。');
         }
 
-        async function loginCloudAdmin() {
-            if (!requireAdmin()) return;
+        async function loginCloudAdmin(silent = false) {
+            if (!requireAdmin()) return false;
+            if (!supabaseClient) initCloud();
             if (!supabaseClient) {
-                alert(currentLang === 'it' ? 'Configura prima Supabase.' : '请先配置 Supabase。');
-                return;
+                if (!silent) alert(currentLang === 'it' ? 'Configura prima Supabase.' : '请先配置 Supabase。');
+                return false;
             }
             const email = document.getElementById('supabase-email').value.trim();
             const password = document.getElementById('supabase-password').value;
+            if (!email || !password) {
+                if (!silent) alert(currentLang === 'it' ? 'Inserisci email e password admin.' : '请填写管理员邮箱和密码。');
+                return false;
+            }
             const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
             if (error) {
                 alert(error.message);
-                return;
+                return false;
             }
             cloudSignedIn = true;
             updateCloudStatus();
             await refreshAllItems();
+            if (!silent) alert(currentLang === 'it' ? 'Login cloud completato.' : '云后台登录成功。');
+            return true;
         }
 
         async function logoutCloudAdmin() {
@@ -1110,9 +1124,17 @@
 
         async function syncLocalToCloud() {
             if (!requireAdmin()) return;
-            if (!cloudEnabled || !supabaseClient || !cloudSignedIn) {
-                alert(currentLang === 'it' ? 'Configura Supabase e accedi al cloud.' : '请先配置 Supabase 并登录云后台。');
+            if (!supabaseClient) initCloud();
+            if (!cloudEnabled || !supabaseClient) {
+                alert(currentLang === 'it' ? 'Supabase non configurato o non caricato. Aggiorna la pagina.' : 'Supabase 未配置或未加载，请刷新页面。');
                 return;
+            }
+            if (!cloudSignedIn) {
+                const loggedIn = await loginCloudAdmin(true);
+                if (!loggedIn) {
+                    alert(currentLang === 'it' ? 'Login cloud non riuscito. Controlla email e password.' : '云后台登录失败，请检查邮箱和密码。');
+                    return;
+                }
             }
             const rows = [];
             ['usato', 'accessori', 'newproducts', 'discounts'].forEach(section => {
