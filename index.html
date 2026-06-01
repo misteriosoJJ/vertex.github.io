@@ -8,16 +8,17 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { font-family: 'Inter', sans-serif; background: #ffffff; color: #1f2937; }
+        html, body { font-family: 'Inter', sans-serif; background: #ffffff; color: #1f2937; scroll-behavior: smooth; }
         
         /* Header */
         header { background: #ffffff; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 50; }
-        .header-top { display: flex; align-items: center; justify-content: space-between; padding: 16px 40px; max-width: 1400px; margin: 0 auto; }
+        .header-top { display: flex; align-items: center; justify-content: space-between; padding: 16px 40px; max-width: 1400px; margin: 0 auto; gap: 24px; }
         .logo-section { display: flex; align-items: center; gap: 40px; }
         .logo { font-size: 1.8rem; font-weight: 700; color: #1f2937; }
-        .nav-top { display: flex; gap: 28px; align-items: center; }
-        .nav-top a { color: #666; text-decoration: none; font-size: 0.95rem; font-weight: 500; cursor: pointer; }
-        .nav-top a:hover { color: #1f4f84; }
+        .header-actions { display: flex; align-items: center; gap: 40px; }
+        .main-nav { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+        .main-nav a { color: #666; text-decoration: none; font-size: 0.95rem; font-weight: 500; cursor: pointer; padding: 8px 0; border-bottom: 2px solid transparent; }
+        .main-nav a:hover, .main-nav a.active { color: #1f4f84; border-bottom-color: #1f4f84; }
         .user-icons { display: flex; gap: 20px; align-items: center; }
         .user-icons button { background: none; border: none; cursor: pointer; color: #1f2937; font-size: 1.1rem; font-weight: 600; padding: 4px 8px; }
         .user-icons button:hover { color: #1f4f84; }
@@ -31,6 +32,15 @@
         .page-header { text-align: center; margin-bottom: 40px; }
         .page-title { font-size: 2.2rem; font-weight: 700; margin-bottom: 12px; color: #1f2937; }
         .page-subtitle { font-size: 1rem; color: #666; }
+
+        /* Store Hero */
+        .hero-section { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr); gap: 32px; align-items: center; background: linear-gradient(135deg, #f8fafc 0%, #eef6ff 100%); border: 1px solid #e5e7eb; border-radius: 12px; padding: 36px; margin-bottom: 32px; }
+        .hero-kicker { color: #1f4f84; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+        .hero-title { color: #111827; font-size: 2.7rem; line-height: 1.05; margin-bottom: 16px; }
+        .hero-copy { color: #4b5563; font-size: 1.05rem; line-height: 1.7; max-width: 680px; margin-bottom: 24px; }
+        .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+        .hero-card { background: #ffffff; border: 1px solid #dbe4ef; border-radius: 10px; padding: 22px; box-shadow: 0 16px 40px rgba(31, 79, 132, 0.08); }
+        .hero-card p { color: #4b5563; line-height: 1.6; margin-top: 8px; }
         
         /* Tabs */
         .tabs-container { display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 32px; }
@@ -43,11 +53,14 @@
         
         /* Items Grid */
         .items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-bottom: 32px; }
-        .item-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; position: relative; }
+        .item-card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; position: relative; box-shadow: 0 10px 24px rgba(17, 24, 39, 0.04); transition: transform 0.2s, box-shadow 0.2s; }
+        .item-card:hover { transform: translateY(-2px); box-shadow: 0 18px 32px rgba(17, 24, 39, 0.08); }
+        .item-image { width: 100%; aspect-ratio: 4 / 3; margin-bottom: 14px; overflow: hidden; border-radius: 8px; background: #f3f4f6; }
+        .item-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .item-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; color: #1f2937; }
         .item-desc { font-size: 0.9rem; color: #666; margin-bottom: 12px; line-height: 1.5; }
-        .item-price { font-size: 1rem; font-weight: 700; color: #1f4f84; margin-bottom: 12px; }
-        .item-actions { display: flex; gap: 8px; }
+        .item-price { font-size: 1.25rem; font-weight: 700; color: #1f4f84; margin-bottom: 12px; }
+        .item-actions { display: flex; gap: 8px; flex-wrap: wrap; }
         .item-btn { background: none; border: 1px solid #d1d5db; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: #666; transition: all 0.3s; }
         .item-btn:hover { background: #e5e7eb; color: #1f2937; }
         .item-btn.delete:hover { background: #fee2e2; color: #dc2626; }
@@ -60,7 +73,7 @@
         /* Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center; }
         .modal.active { display: flex; }
-        .modal-content { background: white; border-radius: 12px; padding: 32px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-content { background: white; border-radius: 12px; padding: 32px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; position: relative; }
         .modal-header { font-size: 1.5rem; font-weight: 700; margin-bottom: 20px; color: #1f2937; }
         .modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; }
         
@@ -90,11 +103,17 @@
         footer { background: #1f2937; color: #ffffff; padding: 32px 40px; text-align: center; margin-top: 60px; font-size: 0.9rem; }
         
         @media (max-width: 768px) {
-            .header-top { flex-direction: column; gap: 12px; padding: 12px 20px; }
+            .header-top { flex-direction: column; gap: 12px; padding: 12px 20px; align-items: stretch; }
+            .header-actions { flex-direction: column; gap: 12px; align-items: stretch; }
+            .main-nav { overflow-x: auto; flex-wrap: nowrap; justify-content: flex-start; padding-bottom: 4px; }
+            .main-nav a { flex: 0 0 auto; }
+            .hero-section { grid-template-columns: 1fr; padding: 24px; }
+            .hero-title { font-size: 2rem; }
             .items-grid { grid-template-columns: 1fr; }
             .container { padding: 20px 16px; }
             .page-title { font-size: 1.6rem; }
             .modal-content { max-width: 100%; padding: 24px; }
+            .info-row { flex-direction: column; gap: 6px; }
         }
     </style>
 </head>
@@ -103,28 +122,25 @@
     <header>
         <div class="header-top">
             <div class="logo">Vertex Carpi</div>
-            <div style="display: flex; align-items: center; gap: 40px;">
-                <div style="display: flex; gap: 20px;">
-                    <a onclick="switchTab('info')" style="cursor: pointer;">
+            <div class="header-actions">
+                <div class="main-nav">
+                    <a onclick="switchTab('info')" data-tab-link="info" class="active">
                         <span data-zh="商店信息" data-it="Informazioni">Informazioni</span>
                     </a>
-                    <a onclick="switchTab('repair')" style="cursor: pointer;">
+                    <a onclick="switchTab('repair')" data-tab-link="repair">
                         <span data-zh="手机维修" data-it="Riparazione">Riparazione</span>
                     </a>
-                    <a onclick="switchTab('usato')" style="cursor: pointer;">
+                    <a onclick="switchTab('usato')" data-tab-link="usato">
                         <span data-zh="二手机商品" data-it="Usato">Usato</span>
                     </a>
-                    <a onclick="switchTab('accessori')" style="cursor: pointer;">
+                    <a onclick="switchTab('accessori')" data-tab-link="accessori">
                         <span data-zh="配件" data-it="Accessori">Accessori</span>
                     </a>
-                    <a onclick="switchTab('newproducts')" style="cursor: pointer;">
+                    <a onclick="switchTab('newproducts')" data-tab-link="newproducts">
                         <span data-zh="新款上市" data-it="Nuovi Arrivi">Nuovi Arrivi</span>
                     </a>
-                    <a onclick="switchTab('discounts')" style="cursor: pointer;">
+                    <a onclick="switchTab('discounts')" data-tab-link="discounts">
                         <span data-zh="折扣产品" data-it="Sconti">Sconti</span>
-                    </a>
-                    <a onclick="switchTab('backend')" style="cursor: pointer;">
-                        <span data-zh="后台" data-it="Backend">Backend</span>
                     </a>
                 </div>
                 <div class="lang-toggle">
@@ -139,8 +155,25 @@
     <div class="container">
         <!-- Store Info Tab -->
         <div id="info" class="tab-content active">
-            <div class="page-header">
-                <h1 class="page-title" data-zh="商店信息" data-it="Informazioni Negozio">Informazioni Negozio</h1>
+            <div class="hero-section">
+                <div>
+                    <div class="hero-kicker" data-zh="Carpi 手机服务" data-it="Assistenza telefoni a Carpi">Assistenza telefoni a Carpi</div>
+                    <h1 class="hero-title" data-zh="维修、二手机和配件，一家店搞定" data-it="Riparazioni, usato e accessori in un unico negozio">Riparazioni, usato e accessori in un unico negozio</h1>
+                    <p class="hero-copy" data-zh="告诉我们手机型号和问题，我们会通过 WhatsApp 给你报价。你也可以查看二手机、配件、新品和折扣商品。" data-it="Scrivici modello e problema del telefono: ti rispondiamo su WhatsApp con un preventivo. Puoi anche consultare usato, accessori, nuovi arrivi e sconti.">Scrivici modello e problema del telefono: ti rispondiamo su WhatsApp con un preventivo. Puoi anche consultare usato, accessori, nuovi arrivi e sconti.</p>
+                    <div class="hero-actions">
+                        <button class="btn-primary" type="button" onclick="switchTab('repair')" data-zh="WhatsApp 维修询价" data-it="Richiedi preventivo">Richiedi preventivo</button>
+                        <a class="btn-secondary" href="tel:+390598302215" style="text-align:center; text-decoration:none;" data-zh="电话联系" data-it="Chiama il negozio">Chiama il negozio</a>
+                    </div>
+                </div>
+                <div class="hero-card">
+                    <div class="info-title" style="margin-bottom: 12px;">
+                        <i class="fas fa-store"></i>
+                        <span data-zh="Vertex Carpi" data-it="Vertex Carpi">Vertex Carpi</span>
+                    </div>
+                    <p>Piazza Giuseppe Garibaldi, 1<br>41012 Carpi MO, Italia</p>
+                    <p><strong>09:30 - 13:30</strong> | <strong>15:00 - 19:30</strong></p>
+                    <p><a href="https://www.google.com/maps/search/?api=1&query=Piazza%20Giuseppe%20Garibaldi%201%2041012%20Carpi%20MO%20Italia" target="_blank" style="color:#1f4f84; font-weight:700; text-decoration:none;" data-zh="打开地图" data-it="Apri su Google Maps">Apri su Google Maps</a></p>
+                </div>
             </div>
             
             <div class="info-section">
@@ -196,19 +229,19 @@
                 <form id="repair-form" onsubmit="sendRepairInquiry(event)">
                     <div class="form-group">
                         <label class="form-label" data-zh="手机型号" data-it="Modello">Modello</label>
-                        <input type="text" id="repair-model" class="form-input" required>
+                        <input type="text" id="repair-model" class="form-input" data-it-placeholder="Es. iPhone 13 Pro" data-zh-placeholder="例如：iPhone 13 Pro" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label" data-zh="问题描述" data-it="Problema">Problema</label>
-                        <textarea id="repair-issue" class="form-textarea" required></textarea>
+                        <textarea id="repair-issue" class="form-textarea" data-it-placeholder="Es. schermo rotto, batteria da sostituire..." data-zh-placeholder="例如：屏幕碎了、电池需要更换..." required></textarea>
                     </div>
                     <div class="form-group">
                         <label class="form-label" data-zh="姓名" data-it="Nome">Nome</label>
-                        <input type="text" id="repair-name" class="form-input" required>
+                        <input type="text" id="repair-name" class="form-input" data-it-placeholder="Il tuo nome" data-zh-placeholder="你的名字" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label" data-zh="电话" data-it="Telefono">Telefono</label>
-                        <input type="text" id="repair-phone" class="form-input" required>
+                        <input type="tel" id="repair-phone" class="form-input" data-it-placeholder="+39 ..." data-zh-placeholder="+39 ..." required>
                     </div>
                     <div class="form-actions">
                         <button type="submit" class="btn-primary" data-zh="发送到WhatsApp" data-it="Invia su WhatsApp">Invia su WhatsApp</button>
@@ -358,13 +391,15 @@
     <footer>
         <p>© 2026 Vertex Carpi - <span data-zh="手机维修 | 二手机商品 | 配件" data-it="Riparazione Telefoni | Usato | Accessori">Riparazione Telefoni | Usato | Accessori</span></p>
         <p style="margin-top: 12px; font-size: 0.85rem; opacity: 0.8;">Piazza Giuseppe Garibaldi, 1, 41012 Carpi MO | Tel: +39 0598302215</p>
+        <button type="button" onclick="openBackend()" style="margin-top: 16px; background: transparent; color: rgba(255,255,255,0.72); border: 1px solid rgba(255,255,255,0.28); padding: 7px 14px; border-radius: 6px; cursor: pointer;" data-zh="管理入口" data-it="Area admin">Area admin</button>
     </footer>
 
     <script>
-        let currentLang = 'it';
+        let currentLang = localStorage.getItem('vertexLang') || 'it';
         let currentCategory = null;
         let editingId = null;
         const currentFilter = { usato: 'all', accessori: 'all' };
+        const adminPassword = 'vertex2026';
 
         const categoryOptions = {
             usato: [
@@ -396,6 +431,10 @@
         };
 
         function init() {
+            document.documentElement.lang = currentLang;
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent.trim() === (currentLang === 'it' ? 'IT' : '中文'));
+            });
             populateFilterOptions('usato');
             populateFilterOptions('accessori');
             loadItems('usato');
@@ -410,6 +449,8 @@
 
         function changeLanguage(lang, event) {
             currentLang = lang;
+            localStorage.setItem('vertexLang', lang);
+            document.documentElement.lang = lang;
             document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
             if (event && event.currentTarget) {
                 event.currentTarget.classList.add('active');
@@ -423,6 +464,9 @@
                 if (text) {
                     el.textContent = text;
                 }
+            });
+            document.querySelectorAll('[data-' + currentLang + '-placeholder]').forEach(el => {
+                el.placeholder = el.getAttribute('data-' + currentLang + '-placeholder');
             });
             populateFilterOptions('usato');
             populateFilterOptions('accessori');
@@ -439,6 +483,21 @@
                 tab.classList.remove('active');
             });
             document.getElementById(tabName).classList.add('active');
+            document.querySelectorAll('[data-tab-link]').forEach(link => {
+                link.classList.toggle('active', link.getAttribute('data-tab-link') === tabName);
+            });
+            if (tabName !== 'backend') {
+                recordVisit(tabName);
+            }
+        }
+
+        function openBackend() {
+            const password = prompt(currentLang === 'it' ? 'Password area admin:' : '请输入管理密码：');
+            if (password === adminPassword) {
+                switchTab('backend');
+            } else if (password) {
+                alert(currentLang === 'it' ? 'Password non corretta.' : '密码不正确。');
+            }
         }
 
         function populateFilterOptions(category) {
@@ -459,8 +518,44 @@
             return categoryLabels[category] ? categoryLabels[category][currentLang] || category : category;
         }
 
-        function loadItems(category) {
+        function createId() {
+            return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        }
+
+        function getItems(category) {
             const items = JSON.parse(localStorage.getItem(category) || '[]');
+            let changed = false;
+            const normalized = items.map(item => {
+                if (item.id) return item;
+                changed = true;
+                return { ...item, id: createId() };
+            });
+            if (changed) {
+                localStorage.setItem(category, JSON.stringify(normalized));
+            }
+            return normalized;
+        }
+
+        function saveItems(category, items) {
+            localStorage.setItem(category, JSON.stringify(items));
+        }
+
+        function escapeHtml(value) {
+            return String(value || '').replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[char]));
+        }
+
+        function isSafeImageUrl(url) {
+            return /^(https?:|data:image\/|blob:)/i.test(String(url || ''));
+        }
+
+        function loadItems(category) {
+            const items = getItems(category);
             const grid = document.getElementById(category + '-grid');
             if (!grid) return;
             grid.innerHTML = '';
@@ -473,16 +568,21 @@
             filteredItems.forEach((item, index) => {
                 const card = document.createElement('div');
                 card.className = 'item-card';
-                const imageMarkup = item.image ? `<div style="margin-bottom:12px;"><img src="${item.image}" alt="${item.name}" style="width:100%;border-radius:12px;object-fit:cover;max-height:180px;"></div>` : '';
+                const safeName = escapeHtml(item.name);
+                const safeDesc = escapeHtml(item.desc);
+                const safeImage = isSafeImageUrl(item.image) ? escapeHtml(item.image) : '';
+                const imageMarkup = safeImage ? `<div class="item-image"><img src="${safeImage}" alt="${safeName}"></div>` : '';
                 const categoryLabel = item.category ? getCategoryLabel(item.category) : '';
+                const safeId = escapeHtml(item.id);
                 card.innerHTML = `
                     ${imageMarkup}
-                    <h3>${item.name}</h3>
-                    <p class="item-desc">${categoryLabel ? '<strong>' + categoryLabel + '</strong><br>' : ''}${item.desc}</p>
+                    <h3>${safeName}</h3>
+                    <p class="item-desc">${categoryLabel ? '<strong>' + escapeHtml(categoryLabel) + '</strong><br>' : ''}${safeDesc}</p>
                     <p class="item-price">€${parseFloat(item.price).toFixed(2)}</p>
                     <div class="item-actions">
-                        <button class="item-btn" onclick="editItem('${category}', ${index})" data-it="Modifica" data-zh="编辑">Modifica</button>
-                        <button class="item-btn delete" onclick="deleteItem('${category}', ${index})" data-it="Elimina" data-zh="删除">Elimina</button>
+                        <button class="item-btn" onclick="askProduct('${category}', '${safeId}')" data-it="WhatsApp" data-zh="咨询">WhatsApp</button>
+                        <button class="item-btn" onclick="editItem('${category}', '${safeId}')" data-it="Modifica" data-zh="编辑">Modifica</button>
+                        <button class="item-btn delete" onclick="deleteItem('${category}', '${safeId}')" data-it="Elimina" data-zh="删除">Elimina</button>
                     </div>
                 `;
                 grid.appendChild(card);
@@ -532,11 +632,12 @@
             });
         }
 
-        function editItem(category, index) {
-            const items = JSON.parse(localStorage.getItem(category) || '[]');
-            const item = items[index];
+        function editItem(category, id) {
+            const items = getItems(category);
+            const item = items.find(entry => entry.id === id);
+            if (!item) return;
             currentCategory = category;
-            editingId = index;
+            editingId = id;
             document.getElementById('modal-title').textContent = currentLang === 'it' ? 'Modifica' : '编辑';
             document.getElementById('form-name').value = item.name;
             document.getElementById('form-desc').value = item.desc;
@@ -551,25 +652,25 @@
 
         function saveItem(event) {
             event.preventDefault();
-            const name = document.getElementById('form-name').value;
-            const desc = document.getElementById('form-desc').value;
+            const name = document.getElementById('form-name').value.trim();
+            const desc = document.getElementById('form-desc').value.trim();
             const price = document.getElementById('form-price').value;
             const category = document.getElementById('form-category').value;
-            const imageUrl = document.getElementById('form-image').value;
+            const imageUrl = document.getElementById('form-image').value.trim();
             const imageFile = document.getElementById('form-image-file').files[0];
 
             const saveData = (image) => {
-                let items = JSON.parse(localStorage.getItem(currentCategory) || '[]');
+                let items = getItems(currentCategory);
                 if (editingId !== null && !image) {
-                    image = items[editingId]?.image || '';
+                    image = items.find(entry => entry.id === editingId)?.image || '';
                 }
-                const newItem = { name, desc, price, category: (currentCategory === 'usato' || currentCategory === 'accessori') ? category : '', image };
+                const newItem = { id: editingId || createId(), name, desc, price, category: (currentCategory === 'usato' || currentCategory === 'accessori') ? category : '', image };
                 if (editingId !== null) {
-                    items[editingId] = newItem;
+                    items = items.map(item => item.id === editingId ? newItem : item);
                 } else {
                     items.push(newItem);
                 }
-                localStorage.setItem(currentCategory, JSON.stringify(items));
+                saveItems(currentCategory, items);
                 loadItems(currentCategory);
                 closeModal();
             };
@@ -583,6 +684,25 @@
             } else {
                 saveData(imageUrl);
             }
+        }
+
+        function deleteItem(category, id) {
+            const message = currentLang === 'it' ? 'Eliminare questo prodotto?' : '确定删除这个商品吗？';
+            if (!confirm(message)) return;
+            const items = getItems(category).filter(item => item.id !== id);
+            saveItems(category, items);
+            loadItems(category);
+        }
+
+        function askProduct(category, id) {
+            const item = getItems(category).find(entry => entry.id === id);
+            if (!item) return;
+            const message = encodeURIComponent(
+                currentLang === 'it'
+                    ? `Ciao, vorrei informazioni su questo prodotto: ${item.name}, prezzo €${parseFloat(item.price).toFixed(2)}.`
+                    : `你好，我想咨询这个商品：${item.name}，价格 €${parseFloat(item.price).toFixed(2)}。`
+            );
+            window.open(`https://wa.me/393207698312?text=${message}`, '_blank');
         }
 
         function updateFilter(category) {
@@ -671,6 +791,7 @@
                     : `你好，我想咨询手机维修价格。型号：${model}。问题：${issue}。姓名：${name}。电话：${phone}。`)
             );
             window.open(`https://wa.me/393207698312?text=${message}`, '_blank');
+            event.target.reset();
         }
 
         function closeModal() {
@@ -682,6 +803,12 @@
         document.addEventListener('click', (e) => {
             const modal = document.getElementById('modal');
             if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.getElementById('modal').classList.contains('active')) {
                 closeModal();
             }
         });
