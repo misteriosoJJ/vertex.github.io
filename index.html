@@ -10,6 +10,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { font-family: 'Inter', sans-serif; background: #ffffff; color: #1f2937; scroll-behavior: smooth; }
@@ -392,6 +393,40 @@
                     <i class="fas fa-user-plus"></i> <span data-zh="添加访客" data-it="Aggiungi visitatore">Aggiungi visitatore</span>
                 </button>
             </div>
+            <div class="info-section">
+                <div class="info-title">
+                    <i class="fas fa-cloud"></i>
+                    <span data-zh="云端数据" data-it="Dati cloud">Dati cloud</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label" data-zh="连接状态" data-it="Stato connessione">Stato connessione</span>
+                    <span class="info-value" id="cloud-status">Local</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Supabase URL</label>
+                    <input type="url" id="supabase-url" class="form-input" placeholder="https://xxxx.supabase.co">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Supabase anon public key</label>
+                    <input type="text" id="supabase-key" class="form-input" placeholder="eyJhbGciOi...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" data-zh="管理员邮箱" data-it="Email admin">Email admin</label>
+                    <input type="email" id="supabase-email" class="form-input" placeholder="admin@example.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" data-zh="管理员密码" data-it="Password admin">Password admin</label>
+                    <input type="password" id="supabase-password" class="form-input">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-primary" onclick="saveCloudSettings()" data-zh="保存云设置" data-it="Salva cloud">Salva cloud</button>
+                    <button type="button" class="btn-secondary" onclick="loginCloudAdmin()" data-zh="登录云后台" data-it="Login cloud">Login cloud</button>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-primary" onclick="syncLocalToCloud()" data-zh="本地同步到云端" data-it="Sincronizza sul cloud">Sincronizza sul cloud</button>
+                    <button type="button" class="btn-secondary" onclick="logoutCloudAdmin()" data-zh="退出云登录" data-it="Logout cloud">Logout cloud</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -454,6 +489,15 @@
         let isAdmin = sessionStorage.getItem('vertexAdmin') === 'true';
         const currentFilter = { usato: 'all', accessori: 'all' };
         const adminPassword = 'vertex2026';
+        const SUPABASE_URL = '';
+        const SUPABASE_ANON_KEY = '';
+        const cloudConfig = {
+            url: SUPABASE_URL || localStorage.getItem('vertexSupabaseUrl') || '',
+            key: SUPABASE_ANON_KEY || localStorage.getItem('vertexSupabaseKey') || ''
+        };
+        let supabaseClient = null;
+        let cloudEnabled = false;
+        let cloudSignedIn = false;
 
         const categoryOptions = {
             usato: [
@@ -484,18 +528,16 @@
             Auricolari: { it: 'Auricolari', zh: '耳机' }
         };
 
-        function init() {
+        async function init() {
             document.documentElement.lang = currentLang;
+            initCloud();
             updateAdminMode();
             document.querySelectorAll('.lang-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.textContent.trim() === (currentLang === 'it' ? 'IT' : '中文'));
             });
             populateFilterOptions('usato');
             populateFilterOptions('accessori');
-            loadItems('usato');
-            loadItems('accessori');
-            loadItems('newproducts');
-            loadItems('discounts');
+            await refreshAllItems();
             updateLanguage();
             renderVisitorList();
             updateTrafficStats();
@@ -513,7 +555,7 @@
             updateLanguage();
         }
 
-        function updateLanguage() {
+        async function updateLanguage() {
             document.querySelectorAll('[data-' + currentLang + ']').forEach(el => {
                 const text = el.getAttribute('data-' + currentLang);
                 if (text) {
@@ -525,10 +567,7 @@
             });
             populateFilterOptions('usato');
             populateFilterOptions('accessori');
-            loadItems('usato');
-            loadItems('accessori');
-            loadItems('newproducts');
-            loadItems('discounts');
+            await refreshAllItems();
             renderVisitorList();
             updateTrafficStats();
         }
@@ -560,16 +599,80 @@
 
         function updateAdminMode() {
             document.body.classList.toggle('admin-mode', isAdmin);
-            loadItems('usato');
-            loadItems('accessori');
-            loadItems('newproducts');
-            loadItems('discounts');
+            refreshAllItems();
+            updateCloudStatus();
         }
 
         function requireAdmin() {
             if (isAdmin) return true;
             alert(currentLang === 'it' ? 'Solo amministratore.' : '只有管理员可以修改。');
             return false;
+        }
+
+        function initCloud() {
+            if (cloudConfig.url && cloudConfig.key && window.supabase) {
+                supabaseClient = window.supabase.createClient(cloudConfig.url, cloudConfig.key);
+                cloudEnabled = true;
+                supabaseClient.auth.getSession().then(({ data }) => {
+                    cloudSignedIn = !!data.session;
+                    updateCloudStatus();
+                });
+            }
+            const urlInput = document.getElementById('supabase-url');
+            const keyInput = document.getElementById('supabase-key');
+            if (urlInput) urlInput.value = cloudConfig.url;
+            if (keyInput) keyInput.value = cloudConfig.key;
+            updateCloudStatus();
+        }
+
+        function updateCloudStatus() {
+            const status = document.getElementById('cloud-status');
+            if (!status) return;
+            if (!cloudEnabled) {
+                status.textContent = currentLang === 'it' ? 'Locale - cloud non configurato' : '本地模式 - 未配置云端';
+            } else if (!cloudSignedIn) {
+                status.textContent = currentLang === 'it' ? 'Cloud lettura pubblica - admin non loggato' : '云端公开读取 - 管理员未登录';
+            } else {
+                status.textContent = currentLang === 'it' ? 'Cloud connesso - admin loggato' : '云端已连接 - 管理员已登录';
+            }
+        }
+
+        function saveCloudSettings() {
+            if (!requireAdmin()) return;
+            const url = document.getElementById('supabase-url').value.trim();
+            const key = document.getElementById('supabase-key').value.trim();
+            if (!url || !key) {
+                alert(currentLang === 'it' ? 'Inserisci URL e anon key.' : '请填写 URL 和 anon key。');
+                return;
+            }
+            localStorage.setItem('vertexSupabaseUrl', url);
+            localStorage.setItem('vertexSupabaseKey', key);
+            alert(currentLang === 'it' ? 'Impostazioni salvate. Ricarica la pagina.' : '云设置已保存，请刷新页面。');
+        }
+
+        async function loginCloudAdmin() {
+            if (!requireAdmin()) return;
+            if (!supabaseClient) {
+                alert(currentLang === 'it' ? 'Configura prima Supabase.' : '请先配置 Supabase。');
+                return;
+            }
+            const email = document.getElementById('supabase-email').value.trim();
+            const password = document.getElementById('supabase-password').value;
+            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) {
+                alert(error.message);
+                return;
+            }
+            cloudSignedIn = true;
+            updateCloudStatus();
+            await refreshAllItems();
+        }
+
+        async function logoutCloudAdmin() {
+            if (!supabaseClient) return;
+            await supabaseClient.auth.signOut();
+            cloudSignedIn = false;
+            updateCloudStatus();
         }
 
         function populateFilterOptions(category) {
@@ -612,6 +715,55 @@
             localStorage.setItem(category, JSON.stringify(items));
         }
 
+        function cloudRowToItem(row) {
+            return {
+                id: row.id,
+                name: row.name,
+                desc: row.description || '',
+                price: row.price,
+                category: row.item_category || '',
+                image: row.image_url || ''
+            };
+        }
+
+        function itemToCloudRow(item, section) {
+            return {
+                id: item.id,
+                section,
+                name: item.name,
+                description: item.desc,
+                price: Number(item.price || 0),
+                item_category: item.category || '',
+                image_url: item.image || '',
+                updated_at: new Date().toISOString()
+            };
+        }
+
+        async function getCloudItems(category) {
+            if (!cloudEnabled || !supabaseClient) return null;
+            const { data, error } = await supabaseClient
+                .from('products')
+                .select('*')
+                .eq('section', category)
+                .order('created_at', { ascending: false });
+            if (error) {
+                console.warn(error);
+                return null;
+            }
+            const items = data.map(cloudRowToItem);
+            saveItems(category, items);
+            return items;
+        }
+
+        async function refreshAllItems() {
+            await Promise.all([
+                loadItems('usato'),
+                loadItems('accessori'),
+                loadItems('newproducts'),
+                loadItems('discounts')
+            ]);
+        }
+
         function escapeHtml(value) {
             return String(value || '').replace(/[&<>"']/g, char => ({
                 '&': '&amp;',
@@ -626,8 +778,8 @@
             return /^(https?:|data:image\/|blob:)/i.test(String(url || ''));
         }
 
-        function loadItems(category) {
-            const items = getItems(category);
+        async function loadItems(category) {
+            const items = await getCloudItems(category) || getItems(category);
             const grid = document.getElementById(category + '-grid');
             if (!grid) return;
             grid.innerHTML = '';
@@ -736,12 +888,23 @@
             const imageUrl = document.getElementById('form-image').value.trim();
             const imageFile = document.getElementById('form-image-file').files[0];
 
-            const saveData = (image) => {
+            const saveData = async (image) => {
                 let items = getItems(currentCategory);
                 if (editingId !== null && !image) {
                     image = items.find(entry => entry.id === editingId)?.image || '';
                 }
                 const newItem = { id: editingId || createId(), name, desc, price, category: (currentCategory === 'usato' || currentCategory === 'accessori') ? category : '', image };
+                if (cloudEnabled && supabaseClient) {
+                    if (!cloudSignedIn) {
+                        alert(currentLang === 'it' ? 'Accedi al cloud prima di salvare.' : '请先登录云后台再保存。');
+                        return;
+                    }
+                    const { error } = await supabaseClient.from('products').upsert(itemToCloudRow(newItem, currentCategory));
+                    if (error) {
+                        alert(error.message);
+                        return;
+                    }
+                }
                 if (editingId !== null) {
                     items = items.map(item => item.id === editingId ? newItem : item);
                 } else {
@@ -753,7 +916,7 @@
             };
 
             if (imageFile) {
-                resizeImageFile(imageFile).then(saveData).catch(() => {
+                resizeImageFile(imageFile).then(uploadImageToCloud).then(saveData).catch(() => {
                     const reader = new FileReader();
                     reader.onload = function () {
                         saveData(reader.result);
@@ -763,6 +926,21 @@
             } else {
                 saveData(imageUrl);
             }
+        }
+
+        async function uploadImageToCloud(dataUrl) {
+            if (!cloudEnabled || !supabaseClient || !cloudSignedIn || !dataUrl.startsWith('data:')) {
+                return dataUrl;
+            }
+            const response = await fetch(dataUrl);
+            const blob = await response.blob();
+            const filePath = `${currentCategory}/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+            const { error } = await supabaseClient.storage
+                .from('product-images')
+                .upload(filePath, blob, { contentType: 'image/jpeg', upsert: true });
+            if (error) throw error;
+            const { data } = supabaseClient.storage.from('product-images').getPublicUrl(filePath);
+            return data.publicUrl;
         }
 
         function resizeImageFile(file) {
@@ -814,10 +992,21 @@
             preview.classList.remove('active');
         }
 
-        function deleteItem(category, id) {
+        async function deleteItem(category, id) {
             if (!requireAdmin()) return;
             const message = currentLang === 'it' ? 'Eliminare questo prodotto?' : '确定删除这个商品吗？';
             if (!confirm(message)) return;
+            if (cloudEnabled && supabaseClient) {
+                if (!cloudSignedIn) {
+                    alert(currentLang === 'it' ? 'Accedi al cloud prima di eliminare.' : '请先登录云后台再删除。');
+                    return;
+                }
+                const { error } = await supabaseClient.from('products').delete().eq('id', id);
+                if (error) {
+                    alert(error.message);
+                    return;
+                }
+            }
             const items = getItems(category).filter(item => item.id !== id);
             saveItems(category, items);
             loadItems(category);
@@ -917,6 +1106,29 @@
                 event.target.value = '';
             };
             reader.readAsText(file);
+        }
+
+        async function syncLocalToCloud() {
+            if (!requireAdmin()) return;
+            if (!cloudEnabled || !supabaseClient || !cloudSignedIn) {
+                alert(currentLang === 'it' ? 'Configura Supabase e accedi al cloud.' : '请先配置 Supabase 并登录云后台。');
+                return;
+            }
+            const rows = [];
+            ['usato', 'accessori', 'newproducts', 'discounts'].forEach(section => {
+                getItems(section).forEach(item => rows.push(itemToCloudRow(item, section)));
+            });
+            if (!rows.length) {
+                alert(currentLang === 'it' ? 'Nessun prodotto locale da sincronizzare.' : '没有本地商品可同步。');
+                return;
+            }
+            const { error } = await supabaseClient.from('products').upsert(rows);
+            if (error) {
+                alert(error.message);
+                return;
+            }
+            alert(currentLang === 'it' ? 'Inventario sincronizzato sul cloud.' : '本地库存已同步到云端。');
+            await refreshAllItems();
         }
 
         function updateTrafficStats() {
