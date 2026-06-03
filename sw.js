@@ -1,8 +1,10 @@
-const CACHE_NAME = 'vertex-carpi-v11';
+const CACHE_NAME = 'vertex-carpi-v12';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
+  './sitemap.xml',
+  './robots.txt',
   './vertex-icon.svg'
 ];
 

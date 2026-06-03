@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://misteriosojj.github.io/vertex.github.io/sitemap.xml
