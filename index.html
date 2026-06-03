@@ -517,6 +517,7 @@
         let isAdmin = sessionStorage.getItem('vertexAdmin') === 'true';
         const currentFilter = { usato: 'all', accessori: 'all', discounts: 'all' };
         const adminPassword = 'vertex2026';
+        const WHATSAPP_PHONE = '393207698312';
         const SUPABASE_URL = 'https://yxijbkrdwxhdrofnskdo.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4aWpia3Jkd3hoZHJvZm5za2RvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMTIxMDYsImV4cCI6MjA5NTg4ODEwNn0.odsPpyb7_ljy-HvnPxAIuWOfnBSH57L5YI2CeD4kEL8';
         const cloudConfig = {
@@ -1278,12 +1279,10 @@
         function askProduct(category, id) {
             const item = getItems(category).find(entry => entry.id === id);
             if (!item) return;
-            const message = encodeURIComponent(
-                currentLang === 'it'
-                    ? `Ciao, vorrei informazioni su questo prodotto: ${item.name}, prezzo €${parseFloat(item.price).toFixed(2)}.`
-                    : `你好，我想咨询这个商品：${item.name}，价格 €${parseFloat(item.price).toFixed(2)}。`
-            );
-            window.open(`https://wa.me/393207698312?text=${message}`, '_blank');
+            const message = currentLang === 'it'
+                ? `Ciao, vorrei informazioni su questo prodotto: ${item.name}, prezzo €${parseFloat(item.price).toFixed(2)}.`
+                : `你好，我想咨询这个商品：${item.name}，价格 €${parseFloat(item.price).toFixed(2)}。`;
+            openWhatsAppMessage(message);
         }
 
         function updateFilter(category) {
@@ -1438,13 +1437,26 @@
             const issue = document.getElementById('repair-issue').value;
             const name = document.getElementById('repair-name').value;
             const phone = document.getElementById('repair-phone').value;
-            const message = encodeURIComponent(
-                (currentLang === 'it'
-                    ? `Ciao, vorrei un preventivo per il mio telefono. Modello: ${model}. Problema: ${issue}. Nome: ${name}. Telefono: ${phone}.`
-                    : `你好，我想咨询手机维修价格。型号：${model}。问题：${issue}。姓名：${name}。电话：${phone}。`)
-            );
-            window.open(`https://wa.me/393207698312?text=${message}`, '_blank');
+            const message = currentLang === 'it'
+                ? `Ciao, vorrei un preventivo per il mio telefono. Modello: ${model}. Problema: ${issue}. Nome: ${name}. Telefono: ${phone}.`
+                : `你好，我想咨询手机维修价格。型号：${model}。问题：${issue}。姓名：${name}。电话：${phone}。`;
+            openWhatsAppMessage(message);
             event.target.reset();
+        }
+
+        function openWhatsAppMessage(message) {
+            const encoded = encodeURIComponent(message);
+            const appUrl = `whatsapp://send?phone=${WHATSAPP_PHONE}&text=${encoded}`;
+            const webUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${encoded}`;
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            if (isMobile) {
+                window.location.href = appUrl;
+                window.setTimeout(() => {
+                    window.location.href = webUrl;
+                }, 900);
+                return;
+            }
+            window.open(webUrl, '_blank', 'noopener');
         }
 
         function closeModal() {
