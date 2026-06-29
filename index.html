@@ -89,7 +89,11 @@
         .hero-copy { color: #4b5563; font-size: 1.05rem; line-height: 1.7; max-width: 680px; margin-bottom: 24px; }
         .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
         .hero-card { background: #ffffff; border: 1px solid #dbe4ef; border-radius: 10px; padding: 22px; box-shadow: 0 16px 40px rgba(31, 79, 132, 0.08); }
+        .hero-card-layout { display: grid; grid-template-columns: minmax(0, 1fr) 132px; gap: 18px; align-items: start; }
         .hero-card p { color: #4b5563; line-height: 1.6; margin-top: 8px; }
+        .hero-qr { text-align: center; }
+        .hero-qr img { width: 132px; max-width: 100%; aspect-ratio: 1 / 1; display: block; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; background: #ffffff; }
+        .hero-qr span { display: block; margin-top: 8px; color: #1f4f84; font-size: 0.82rem; font-weight: 700; line-height: 1.3; }
         
         /* Tabs */
         .tabs-container { display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 32px; }
@@ -188,6 +192,9 @@
             .main-nav a { flex: 0 0 auto; }
             .hero-section { grid-template-columns: 1fr; padding: 24px; }
             .hero-title { font-size: 2rem; }
+            .hero-card-layout { grid-template-columns: 1fr; }
+            .hero-qr { text-align: left; }
+            .hero-qr img { width: 150px; }
             .items-grid { grid-template-columns: 1fr; }
             .container { padding: 20px 16px; }
             .page-title { font-size: 1.6rem; }
@@ -213,6 +220,9 @@
                     </a>
                     <a onclick="switchTab('repair')" data-tab-link="repair">
                         <span data-zh="手机维修" data-it="Riparazione">Riparazione</span>
+                    </a>
+                    <a onclick="switchTab('sellphone')" data-tab-link="sellphone">
+                        <span data-zh="收二手机估值" data-it="Valutazione usato">Valutazione usato</span>
                     </a>
                     <a onclick="switchTab('usato')" data-tab-link="usato">
                         <span data-zh="二手机商品" data-it="Usato">Usato</span>
@@ -275,20 +285,29 @@
                 <div>
                     <div class="hero-kicker" data-zh="Carpi 手机服务" data-it="Assistenza telefoni a Carpi">Assistenza telefoni a Carpi</div>
                     <h1 class="hero-title" data-zh="维修、二手机和配件，一家店搞定" data-it="Riparazioni, usato e accessori in un unico negozio">Riparazioni, usato e accessori in un unico negozio</h1>
-                    <p class="hero-copy" data-zh="告诉我们手机型号和问题，我们会通过 WhatsApp 给你报价。你也可以查看二手机、配件、新品和折扣商品。" data-it="Scrivici modello e problema del telefono: ti rispondiamo su WhatsApp con un preventivo. Puoi anche consultare usato, accessori, nuovi arrivi e sconti.">Scrivici modello e problema del telefono: ti rispondiamo su WhatsApp con un preventivo. Puoi anche consultare usato, accessori, nuovi arrivi e sconti.</p>
+                    <p class="hero-copy" data-zh="告诉我们手机型号和问题，我们会通过 WhatsApp 给你报价。想卖二手机，也可以提交资料让我们估值。" data-it="Scrivici modello e problema del telefono: ti rispondiamo su WhatsApp con un preventivo. Se vuoi vendere un usato, invia i dati per una valutazione.">Scrivici modello e problema del telefono: ti rispondiamo su WhatsApp con un preventivo. Se vuoi vendere un usato, invia i dati per una valutazione.</p>
                     <div class="hero-actions">
                         <button class="btn-primary" type="button" onclick="switchTab('repair')" data-zh="WhatsApp 维修询价" data-it="Richiedi preventivo">Richiedi preventivo</button>
+                        <button class="btn-primary" type="button" onclick="switchTab('sellphone')" data-zh="二手机估值" data-it="Valuta usato">Valuta usato</button>
                         <a class="btn-secondary" href="tel:+390598302215" style="text-align:center; text-decoration:none;" data-zh="电话联系" data-it="Chiama il negozio">Chiama il negozio</a>
                     </div>
                 </div>
                 <div class="hero-card">
-                    <div class="info-title" style="margin-bottom: 12px;">
-                        <i class="fas fa-store"></i>
-                        <span data-zh="Vertex Carpi" data-it="Vertex Carpi">Vertex Carpi</span>
+                    <div class="hero-card-layout">
+                        <div>
+                            <div class="info-title" style="margin-bottom: 12px;">
+                                <i class="fas fa-store"></i>
+                                <span data-zh="Vertex Carpi" data-it="Vertex Carpi">Vertex Carpi</span>
+                            </div>
+                            <p>Piazza Giuseppe Garibaldi, 1<br>41012 Carpi MO, Italia</p>
+                            <p><strong>09:30 - 13:30</strong> | <strong>15:00 - 19:30</strong></p>
+                            <p><a href="https://www.google.com/maps/search/?api=1&query=Piazza%20Giuseppe%20Garibaldi%201%2041012%20Carpi%20MO%20Italia" target="_blank" style="color:#1f4f84; font-weight:700; text-decoration:none;" data-zh="打开地图" data-it="Apri su Google Maps">Apri su Google Maps</a></p>
+                        </div>
+                        <div class="hero-qr">
+                            <img src="data:image/png;base64,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" alt="Vertex Carpi QR code">
+                            <span data-zh="扫码进入网页" data-it="Scansiona il sito">Scansiona il sito</span>
+                        </div>
                     </div>
-                    <p>Piazza Giuseppe Garibaldi, 1<br>41012 Carpi MO, Italia</p>
-                    <p><strong>09:30 - 13:30</strong> | <strong>15:00 - 19:30</strong></p>
-                    <p><a href="https://www.google.com/maps/search/?api=1&query=Piazza%20Giuseppe%20Garibaldi%201%2041012%20Carpi%20MO%20Italia" target="_blank" style="color:#1f4f84; font-weight:700; text-decoration:none;" data-zh="打开地图" data-it="Apri su Google Maps">Apri su Google Maps</a></p>
                 </div>
             </div>
             
@@ -361,6 +380,63 @@
                     </div>
                     <div class="form-actions">
                         <button type="submit" class="btn-primary" data-zh="发送到WhatsApp" data-it="Invia su WhatsApp">Invia su WhatsApp</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Used Phone Valuation Tab -->
+        <div id="sellphone" class="tab-content">
+            <div class="page-header">
+                <h1 class="page-title" data-zh="收二手机估值" data-it="Valutazione telefono usato">Valutazione telefono usato</h1>
+                <p class="page-subtitle" data-zh="填写手机信息，发送到 WhatsApp 获取回收估值" data-it="Invia i dati del telefono su WhatsApp per ricevere una valutazione">Invia i dati del telefono su WhatsApp per ricevere una valutazione</p>
+            </div>
+            <div class="info-section">
+                <div class="info-title">
+                    <i class="fas fa-hand-holding-dollar"></i>
+                    <span data-zh="估值表单" data-it="Modulo valutazione">Modulo valutazione</span>
+                </div>
+                <form id="sellphone-form" onsubmit="sendSellPhoneInquiry(event)">
+                    <div class="form-group">
+                        <label class="form-label" data-zh="手机型号" data-it="Modello telefono">Modello telefono</label>
+                        <input type="text" id="sellphone-model" class="form-input" data-it-placeholder="Es. iPhone 13 Pro" data-zh-placeholder="例如：iPhone 13 Pro" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-zh="容量" data-it="Memoria">Memoria</label>
+                        <input type="text" id="sellphone-storage" class="form-input" data-it-placeholder="Es. 128GB" data-zh-placeholder="例如：128GB" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-zh="手机成色" data-it="Condizione">Condizione</label>
+                        <select id="sellphone-condition" class="form-input" required>
+                            <option value="" data-zh="请选择" data-it="Seleziona">Seleziona</option>
+                            <option value="Come nuovo / 几乎全新" data-zh="几乎全新" data-it="Come nuovo">Come nuovo</option>
+                            <option value="Buono / 正常使用痕迹" data-zh="正常使用痕迹" data-it="Buono">Buono</option>
+                            <option value="Usato / 明显使用痕迹" data-zh="明显使用痕迹" data-it="Usato">Usato</option>
+                            <option value="Danneggiato / 有损坏" data-zh="有损坏" data-it="Danneggiato">Danneggiato</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-zh="电池健康/电池情况" data-it="Batteria">Batteria</label>
+                        <input type="text" id="sellphone-battery" class="form-input" data-it-placeholder="Es. 86%, buona, da controllare" data-zh-placeholder="例如：86%、正常、需要检查">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-zh="故障或备注" data-it="Difetti o note">Difetti o note</label>
+                        <textarea id="sellphone-notes" class="form-textarea" data-it-placeholder="Es. schermo graffiato, Face ID non funziona, nessun problema..." data-zh-placeholder="例如：屏幕划痕、Face ID 不工作、没有问题..." required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-zh="是否有盒子/充电器" data-it="Scatola / caricatore">Scatola / caricatore</label>
+                        <input type="text" id="sellphone-accessories" class="form-input" data-it-placeholder="Es. scatola sì, caricatore no" data-zh-placeholder="例如：有盒子，没有充电器">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-zh="姓名" data-it="Nome">Nome</label>
+                        <input type="text" id="sellphone-name" class="form-input" data-it-placeholder="Il tuo nome" data-zh-placeholder="你的名字" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-zh="电话" data-it="Telefono">Telefono</label>
+                        <input type="tel" id="sellphone-phone" class="form-input" data-it-placeholder="+39 ..." data-zh-placeholder="+39 ..." required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary" data-zh="发送到WhatsApp估值" data-it="Invia valutazione WhatsApp">Invia valutazione WhatsApp</button>
                     </div>
                 </form>
             </div>
@@ -549,7 +625,7 @@
 
     <!-- Footer -->
     <footer>
-        <p>© 2026 Vertex Carpi - <span data-zh="手机维修 | 二手机商品 | 配件" data-it="Riparazione Telefoni | Usato | Accessori">Riparazione Telefoni | Usato | Accessori</span></p>
+        <p>© 2026 Vertex Carpi - <span data-zh="手机维修 | 收二手机估值 | 二手机商品 | 配件" data-it="Riparazione Telefoni | Valutazione usato | Usato | Accessori">Riparazione Telefoni | Valutazione usato | Usato | Accessori</span></p>
         <p style="margin-top: 12px; font-size: 0.85rem; opacity: 0.8;">Piazza Giuseppe Garibaldi, 1, 41012 Carpi MO | Tel: +39 0598302215</p>
         <button type="button" onclick="openBackend()" style="margin-top: 16px; background: transparent; color: rgba(255,255,255,0.72); border: 1px solid rgba(255,255,255,0.28); padding: 7px 14px; border-radius: 6px; cursor: pointer;" data-zh="管理入口" data-it="Area admin">Area admin</button>
     </footer>
@@ -1484,6 +1560,24 @@
             const message = currentLang === 'it'
                 ? `Ciao, vorrei un preventivo per il mio telefono. Modello: ${model}. Problema: ${issue}. Nome: ${name}. Telefono: ${phone}.`
                 : `你好，我想咨询手机维修价格。型号：${model}。问题：${issue}。姓名：${name}。电话：${phone}。`;
+            openWhatsAppMessage(message);
+            event.target.reset();
+        }
+
+        function sendSellPhoneInquiry(event) {
+            event.preventDefault();
+            const model = document.getElementById('sellphone-model').value.trim();
+            const storage = document.getElementById('sellphone-storage').value.trim();
+            const conditionSelect = document.getElementById('sellphone-condition');
+            const condition = conditionSelect.selectedOptions[0]?.textContent.trim() || conditionSelect.value;
+            const battery = document.getElementById('sellphone-battery').value.trim();
+            const notes = document.getElementById('sellphone-notes').value.trim();
+            const accessories = document.getElementById('sellphone-accessories').value.trim();
+            const name = document.getElementById('sellphone-name').value.trim();
+            const phone = document.getElementById('sellphone-phone').value.trim();
+            const message = currentLang === 'it'
+                ? `Ciao, vorrei una valutazione per vendere il mio telefono usato. Modello: ${model}. Memoria: ${storage}. Condizione: ${condition}. Batteria: ${battery || 'non indicata'}. Difetti/note: ${notes}. Scatola/caricatore: ${accessories || 'non indicato'}. Nome: ${name}. Telefono: ${phone}.`
+                : `你好，我想卖二手机并咨询回收估值。型号：${model}。容量：${storage}。成色：${condition}。电池情况：${battery || '未填写'}。故障/备注：${notes}。盒子/充电器：${accessories || '未填写'}。姓名：${name}。电话：${phone}。`;
             openWhatsAppMessage(message);
             event.target.reset();
         }
