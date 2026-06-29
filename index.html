@@ -1019,9 +1019,15 @@
 
         function getItemMedia(item) {
             if (Array.isArray(item.media) && item.media.length) {
-                return item.media.filter(media => media && isSafeMediaUrl(media.url));
+                const mediaList = item.media
+                    .map(media => {
+                        const url = media?.url || media?.data || '';
+                        return isSafeMediaUrl(url) ? { ...media, url } : null;
+                    })
+                    .filter(Boolean);
+                if (mediaList.length) return mediaList;
             }
-            return item.image ? [{ type: 'image', url: item.image }] : [];
+            return item.image && isSafeMediaUrl(item.image) ? [{ type: 'image', url: item.image }] : [];
         }
 
         function isExpiredLimitedDiscount(item) {
